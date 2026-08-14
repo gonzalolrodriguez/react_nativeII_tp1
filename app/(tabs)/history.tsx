@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, Platform, Dimensions, RefreshControl, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Platform, RefreshControl, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
