@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, Pressable, ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TextInput, Pressable, ActivityIndicator, Platform, useWindowDimensions } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { habitsService, Habit } from '@/services/habitsService';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const CATEGORIES: Habit['category'][] = ['Salud', 'Estudio', 'Deporte', 'Productividad', 'Otro'];
 
@@ -32,7 +37,24 @@ export default function ManageHabitScreen() {
   const [daysError, setDaysError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // Cargar datos si estamos en modo edición
+  // Animaciones físicas por resorte para el botón de guardar
+  const buttonScale = useSharedValue(1);
+
+  const buttonAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: buttonScale.value }],
+    };
+  });
+
+  const handleButtonPressIn = () => {
+    buttonScale.value = withSpring(0.97, { stiffness: 280, damping: 18, mass: 0.6 });
+  };
+
+  const handleButtonPressOut = () => {
+    buttonScale.value = withSpring(1, { stiffness: 240, damping: 20 });
+  };
+
+  // Cargar datos en modo edición
   useEffect(() => {
     if (id) {
       setIsEditMode(true);
@@ -56,7 +78,6 @@ export default function ManageHabitScreen() {
     }
   }, [id]);
 
-  // Validaciones en tiempo real
   const handleNameChange = (text: string) => {
     setName(text);
     if (text.trim().length >= 3) {
@@ -73,11 +94,10 @@ export default function ManageHabitScreen() {
     }
   };
 
-  // Validar y guardar
+  // Guardar datos
   const handleSave = async () => {
     let isValid = true;
 
-    // Validar nombre
     if (name.trim().length < 3) {
       setNameError('El nombre del hábito debe tener al menos 3 caracteres.');
       isValid = false;
@@ -85,7 +105,6 @@ export default function ManageHabitScreen() {
       setNameError('');
     }
 
-    // Validar días personalizados
     if (frequency === 'custom' && customDays.length === 0) {
       setDaysError('Debés seleccionar al menos un día de la semana.');
       isValid = false;
@@ -118,21 +137,21 @@ export default function ManageHabitScreen() {
     }
   };
 
-  // Colores dinámicos para categorías seleccionadas
+  // Colores dinámicos adaptados al tema oscuro glassmorphic
   const getCategoryStyles = (cat: Habit['category']) => {
     switch (cat) {
-      case 'Salud': return { bg: '#E2FBE9', text: '#248A3D' };
-      case 'Estudio': return { bg: '#E4F2FF', text: '#007AFF' };
-      case 'Deporte': return { bg: '#FFEFE5', text: '#FF9500' };
-      case 'Productividad': return { bg: '#F3E9FF', text: '#8E44AD' };
-      default: return { bg: '#E5E5EA', text: '#1C1C1E' };
+      case 'Salud': return { bg: 'rgba(48, 209, 88, 0.15)', text: '#30D158' };
+      case 'Estudio': return { bg: 'rgba(10, 132, 255, 0.15)', text: '#0A84FF' };
+      case 'Deporte': return { bg: 'rgba(255, 159, 10, 0.15)', text: '#FF9F0A' };
+      case 'Productividad': return { bg: 'rgba(191, 90, 242, 0.15)', text: '#BF5AF2' };
+      default: return { bg: 'rgba(255, 255, 255, 0.08)', text: '#FFFFFF' };
     }
   };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#0A84FF" />
         <Text style={styles.loadingText}>Cargando hábito...</Text>
       </View>
     );
@@ -146,28 +165,29 @@ export default function ManageHabitScreen() {
           title: isEditMode ? 'Editar Hábito' : 'Nuevo Hábito',
           headerBackTitle: 'Atrás',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: '#F2F2F7' },
+          headerStyle: { backgroundColor: '#0B0B0E' },
+          headerTitleStyle: { color: '#FFFFFF', fontWeight: '600' },
+          headerTintColor: '#0A84FF',
         }}
       />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
+      <View style={styles.contentWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           
-          {/* Campo: Nombre del Hábito */}
+          {/* Nombre del Hábito */}
           <Text style={styles.label}>Nombre del hábito</Text>
-          <TextInput
-            style={[styles.input, nameError !== '' && styles.inputError]}
-            placeholder="Ej: Meditar, Estudiar, Tomar agua"
-            placeholderTextColor="#C7C7CC"
-            value={name}
-            onChangeText={handleNameChange}
-            maxLength={50}
-          />
+          <View style={[styles.inputWrapper, nameError !== '' && styles.inputWrapperError]}>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: Meditar, Estudiar, Tomar agua"
+              placeholderTextColor="rgba(255, 255, 255, 0.3)"
+              value={name}
+              onChangeText={handleNameChange}
+              maxLength={50}
+            />
+          </View>
           {nameError !== '' && <Text style={styles.errorText}>{nameError}</Text>}
 
-          {/* Campo: Categoría */}
+          {/* Categoría */}
           <Text style={styles.label}>Categoría</Text>
           <ScrollView 
             horizontal 
@@ -193,6 +213,7 @@ export default function ManageHabitScreen() {
                       styles.chipText,
                       isSelected ? { color: stylesCat.text, fontWeight: '700' } : styles.chipTextUnselected
                     ]}
+                    numberOfLines={1}
                   >
                     {cat}
                   </Text>
@@ -201,7 +222,7 @@ export default function ManageHabitScreen() {
             })}
           </ScrollView>
 
-          {/* Campo: Frecuencia */}
+          {/* Frecuencia */}
           <Text style={styles.label}>Frecuencia</Text>
           <View style={styles.frequencyRow}>
             {(['daily', 'weekly', 'custom'] as Habit['frequency'][]).map((freq) => {
@@ -224,6 +245,7 @@ export default function ManageHabitScreen() {
                       styles.freqText,
                       isSelected ? styles.freqTextSelected : styles.freqTextUnselected
                     ]}
+                    numberOfLines={1}
                   >
                     {labels[freq]}
                   </Text>
@@ -232,9 +254,13 @@ export default function ManageHabitScreen() {
             })}
           </View>
 
-          {/* Selector de días personalizado condicional */}
+          {/* Días activos personalizado */}
           {frequency === 'custom' && (
-            <View style={styles.customDaysContainer}>
+            <View style={styles.customDaysCard}>
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                style={StyleSheet.absoluteFillObject}
+              />
               <Text style={styles.subLabel}>Seleccioná los días de la semana</Text>
               <View style={styles.daysGrid}>
                 {WEEKDAYS.map((day) => {
@@ -264,27 +290,29 @@ export default function ManageHabitScreen() {
             </View>
           )}
 
-          {/* Botón de Guardado */}
-          <Pressable
+          {/* Botón de Guardado con animación de resorte */}
+          <AnimatedPressable
             onPress={handleSave}
+            onPressIn={handleButtonPressIn}
+            onPressOut={handleButtonPressOut}
             disabled={saving}
-            style={({ pressed }) => [
+            style={[
               styles.saveButton,
-              pressed && styles.saveButtonPressed,
-              saving && styles.saveButtonDisabled
+              saving && styles.saveButtonDisabled,
+              buttonAnimatedStyle
             ]}
           >
             {saving ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.saveButtonText}>
+              <Text style={styles.saveButtonText} numberOfLines={1}>
                 {isEditMode ? 'Guardar Cambios' : 'Crear Hábito'}
               </Text>
             )}
-          </Pressable>
+          </AnimatedPressable>
 
         </ScrollView>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -292,12 +320,19 @@ export default function ManageHabitScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0B0E',
+  },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 600, // Limita ancho del formulario en Web/Tablets
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#0B0B0E',
     gap: 12,
   },
   loadingText: {
@@ -305,7 +340,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   label: {
@@ -323,24 +358,39 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginBottom: 12,
   },
+  inputWrapper: {
+    borderRadius: 12, // Nested squircle rounded border
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      } as any,
+    }),
+  },
+  inputWrapperError: {
+    borderColor: '#FF453A', // Apple Red HIG
+  },
   input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 17,
-    color: '#1C1C1E',
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-  },
-  inputError: {
-    borderColor: '#FF3B30',
+    color: '#FFFFFF',
   },
   errorText: {
-    color: '#FF3B30',
+    color: '#FF453A', // Apple Red HIG
     fontSize: 13,
     marginTop: 6,
     paddingLeft: 4,
+    fontWeight: '400',
   },
   chipsContainer: {
     gap: 8,
@@ -349,42 +399,48 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 20, // Squircle para chips
     borderWidth: 1,
   },
   chipUnselected: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   chipText: {
     fontSize: 14,
-    fontWeight: '600',
   },
   chipTextUnselected: {
     color: '#8E8E93',
+    fontWeight: '400',
   },
   frequencyRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 12, // Squircle
     padding: 3,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    ...Platform.select({
+      ios: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      } as any,
+    }),
   },
   freqButton: {
     flex: 1,
     paddingVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9,
+    borderRadius: 9, // Squircle
   },
   freqButtonSelected: {
-    backgroundColor: '#007AFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: '#0A84FF',
   },
   freqButtonUnselected: {
     backgroundColor: 'transparent',
@@ -399,13 +455,25 @@ const styles = StyleSheet.create({
   freqTextUnselected: {
     color: '#8E8E93',
   },
-  customDaysContainer: {
+  customDaysCard: {
     marginTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20, // Main block squircle
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E5E5EA',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+      } as any,
+    }),
   },
   daysGrid: {
     flexDirection: 'row',
@@ -415,18 +483,18 @@ const styles = StyleSheet.create({
   dayCircle: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 12, // Squircle nested day controls
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
   },
   dayCircleSelected: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: '#0A84FF',
+    borderColor: '#0A84FF',
   },
   dayCircleUnselected: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   dayCircleText: {
     fontSize: 14,
@@ -440,22 +508,19 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     marginTop: 40,
-    backgroundColor: '#007AFF',
-    borderRadius: 14,
+    backgroundColor: '#0A84FF',
+    borderRadius: 14, // Squircle nested
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#007AFF',
+    shadowColor: '#0A84FF',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
   },
-  saveButtonPressed: {
-    opacity: 0.85,
-  },
   saveButtonDisabled: {
-    backgroundColor: '#A2C4FF',
+    backgroundColor: 'rgba(10, 132, 255, 0.5)',
   },
   saveButtonText: {
     color: '#FFFFFF',
