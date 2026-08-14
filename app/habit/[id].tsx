@@ -1,16 +1,21 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable, Alert, SafeAreaView, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, Alert, Platform, useWindowDimensions } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate, getScheduledDates } from '@/services/habitsService';
-
-const { width } = Dimensions.get('window');
 
 export default function HabitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [habit, setHabit] = useState<Habit | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Obtener dimensiones de la pantalla
+  const { width } = useWindowDimensions();
+  const isTabletOrWeb = width > 768;
+  const COLUMN_WIDTH = (Math.min(width, 1024) - (isTabletOrWeb ? 48 : 32) - 60) / 7;
 
   const loadHabit = useCallback(async () => {
     if (!id) return;
@@ -99,13 +104,12 @@ export default function HabitDetailScreen() {
     return months[new Date().getMonth()];
   };
 
-  // Filtrar los días del mes actual en los que el hábito estuvo activo y completado
+  // Calcular las estadísticas del mes actual
   const getMonthlyStats = () => {
     const startOfMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const habitCreatedStr = habit.createdAt.split('T')[0];
     const initialDateStr = habitCreatedStr > startOfMonthStr ? habitCreatedStr : startOfMonthStr;
     
-    // Obtener días programados del mes actual hasta hoy
     const scheduledThisMonth = getScheduledDates(habit, todayStr).filter(d => d >= initialDateStr);
     const completedThisMonth = scheduledThisMonth.filter(d => habit.completedDates.includes(d));
     
@@ -135,129 +139,157 @@ export default function HabitDetailScreen() {
             </Pressable>
           ),
           headerStyle: {
-            backgroundColor: '#F2F2F7',
+            backgroundColor: '#0B0B0E',
+          },
+          headerTitleStyle: {
+            color: '#FFFFFF',
+            fontWeight: '600',
           },
           headerShadowVisible: false,
+          headerTintColor: '#0A84FF',
         }}
       />
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Panel de Estadísticas */}
-        <View style={styles.statsPanel}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>🔥 {habit.currentStreak}</Text>
-            <Text style={styles.statTitle}>Racha Actual</Text>
-            <Text style={styles.statDesc}>{habit.currentStreak === 1 ? 'día' : 'días'}</Text>
+      <View style={styles.contentWrapper}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Panel de Estadísticas */}
+          <View style={styles.statsPanel}>
+            <View style={styles.statBox}>
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.statValue}>🔥 {habit.currentStreak}</Text>
+              <Text style={styles.statTitle} numberOfLines={1}>Racha Actual</Text>
+              <Text style={styles.statDesc} numberOfLines={1}>
+                {habit.currentStreak === 1 ? 'día' : 'días'}
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.statValue}>🏆 {habit.maxStreak}</Text>
+              <Text style={styles.statTitle} numberOfLines={1}>Racha Máxima</Text>
+              <Text style={styles.statDesc} numberOfLines={1}>
+                {habit.maxStreak === 1 ? 'día' : 'días'}
+              </Text>
+            </View>
+            <View style={styles.statBox}>
+              <LinearGradient
+                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.statValue}>{stats.percentage}%</Text>
+              <Text style={styles.statTitle} numberOfLines={1}>Efectividad</Text>
+              <Text style={styles.statDesc} numberOfLines={1}>
+                en {currentMonthName()}
+              </Text>
+            </View>
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>🏆 {habit.maxStreak}</Text>
-            <Text style={styles.statTitle}>Racha Máxima</Text>
-            <Text style={styles.statDesc}>{habit.maxStreak === 1 ? 'día' : 'días'}</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{stats.percentage}%</Text>
-            <Text style={styles.statTitle}>Efectividad</Text>
-            <Text style={styles.statDesc}>en {currentMonthName()}</Text>
-          </View>
-        </View>
 
-        {/* Frecuencia y Categoría Info */}
-        <View style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Categoría</Text>
-            <Text style={styles.infoValue}>{habit.category}</Text>
-          </View>
-          <View style={styles.infoDivider} />
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Frecuencia</Text>
-            <Text style={styles.infoValue}>
-              {habit.frequency === 'daily' 
-                ? 'Todos los días' 
-                : habit.frequency === 'weekly' 
-                ? 'Una vez por semana' 
-                : 'Días seleccionados'}
-            </Text>
-          </View>
-          {habit.frequency === 'custom' && habit.customDays && (
-            <>
-              <View style={styles.infoDivider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Días activos</Text>
-                <Text style={styles.infoValue}>
-                  {habit.customDays.map(d => ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'][d]).join(', ')}
-                </Text>
-              </View>
-            </>
-          )}
-        </View>
-
-        {/* Historial Visual de Anillos estilo Fitness */}
-        <Text style={styles.sectionTitle}>Historial de {currentMonthName()}</Text>
-        <View style={styles.historyCard}>
-          <View style={styles.grid}>
-            {days.map((day) => {
-              const dateStr = day.toISOString().split('T')[0];
-              const dayNum = day.getDate();
-              const isScheduled = isHabitScheduledForDate(habit, dateStr);
-              const isCompleted = habit.completedDates.includes(dateStr);
-              const isFuture = dateStr > todayStr;
-              const isCreatedBefore = habit.createdAt.split('T')[0] <= dateStr;
-
-              // Determinar estilo del anillo/círculo
-              let circleStyle = styles.circleInactive;
-              let hasIcon = false;
-
-              if (isFuture || !isCreatedBefore) {
-                // Futuro o antes de su creación
-                circleStyle = styles.circleFuture;
-              } else if (!isScheduled) {
-                // No programado
-                circleStyle = styles.circleNotScheduled;
-              } else if (isCompleted) {
-                // Completado
-                circleStyle = styles.circleCompleted;
-                hasIcon = true;
-              } else {
-                // Programado pero incompleto
-                circleStyle = styles.circleMissed;
-              }
-
-              return (
-                <View key={dayNum} style={styles.gridCell}>
-                  <View style={[styles.circleRing, circleStyle]}>
-                    {hasIcon ? (
-                      <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                    ) : (
-                      <Text style={[styles.cellDayText, isScheduled && !isCompleted && !isFuture && isCreatedBefore && styles.cellDayTextMissed]}>
-                        {dayNum}
-                      </Text>
-                    )}
-                  </View>
+          {/* Frecuencia y Categoría Info */}
+          <View style={styles.infoCard}>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Categoría</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>{habit.category}</Text>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Frecuencia</Text>
+              <Text style={styles.infoValue} numberOfLines={1}>
+                {habit.frequency === 'daily' 
+                  ? 'Todos los días' 
+                  : habit.frequency === 'weekly' 
+                  ? 'Una vez por semana' 
+                  : 'Días seleccionados'}
+              </Text>
+            </View>
+            {habit.frequency === 'custom' && habit.customDays && (
+              <>
+                <View style={styles.infoDivider} />
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Días activos</Text>
+                  <Text style={styles.infoValue} numberOfLines={1}>
+                    {habit.customDays.map(d => ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'][d]).join(', ')}
+                  </Text>
                 </View>
-              );
-            })}
+              </>
+            )}
           </View>
-          <View style={styles.gridLegend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendIndicator, styles.circleCompleted]} />
-              <Text style={styles.legendText}>Completado</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendIndicator, styles.circleMissed]} />
-              <Text style={styles.legendText}>Incompleto</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendIndicator, styles.circleNotScheduled]} />
-              <Text style={styles.legendText}>No activo</Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Botón de Eliminación Discreta */}
-        <Pressable onPress={handleDelete} style={styles.deleteButton}>
-          <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-          <Text style={styles.deleteButtonText}>Eliminar hábito</Text>
-        </Pressable>
-      </ScrollView>
+          {/* Historial Visual de Anillos estilo Fitness */}
+          <Text style={styles.sectionTitle}>Historial de {currentMonthName()}</Text>
+          <View style={styles.historyCard}>
+            <LinearGradient
+              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <View style={styles.grid}>
+              {days.map((day) => {
+                const dateStr = day.toISOString().split('T')[0];
+                const dayNum = day.getDate();
+                const isScheduled = isHabitScheduledForDate(habit, dateStr);
+                const isCompleted = habit.completedDates.includes(dateStr);
+                const isFuture = dateStr > todayStr;
+                const isCreatedBefore = habit.createdAt.split('T')[0] <= dateStr;
+
+                let circleStyle = styles.circleInactive;
+                let hasIcon = false;
+
+                if (isFuture || !isCreatedBefore) {
+                  circleStyle = styles.circleFuture;
+                } else if (!isScheduled) {
+                  circleStyle = styles.circleNotScheduled;
+                } else if (isCompleted) {
+                  circleStyle = styles.circleCompleted;
+                  hasIcon = true;
+                } else {
+                  circleStyle = styles.circleMissed;
+                }
+
+                return (
+                  <View key={dayNum} style={[styles.gridCell, { width: COLUMN_WIDTH, height: COLUMN_WIDTH }]}>
+                    <View style={[styles.circleRing, circleStyle]}>
+                      {hasIcon ? (
+                        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                      ) : (
+                        <Text style={[styles.cellDayText, isScheduled && !isCompleted && !isFuture && isCreatedBefore && styles.cellDayTextMissed]}>
+                          {dayNum}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+            <View style={styles.gridLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendIndicator, styles.circleCompleted]} />
+                <Text style={styles.legendText} numberOfLines={1}>Completado</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendIndicator, styles.circleMissed]} />
+                <Text style={styles.legendText} numberOfLines={1}>Incompleto</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendIndicator, styles.circleNotScheduled]} />
+                <Text style={styles.legendText} numberOfLines={1}>No activo</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Botón de Eliminación Discreta */}
+          <Pressable onPress={handleDelete} style={styles.deleteButton}>
+            <Ionicons name="trash-outline" size={18} color="#FF453A" />
+            <Text style={styles.deleteButtonText} numberOfLines={1}>Eliminar hábito</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -265,20 +297,26 @@ export default function HabitDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0B0E',
+  },
+  contentWrapper: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 1024,
+    alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F2F2F7',
+    backgroundColor: '#0B0B0E',
   },
   loadingText: {
     fontSize: 16,
     color: '#8E8E93',
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
   },
   headerBtn: {
@@ -288,7 +326,7 @@ const styles = StyleSheet.create({
   headerBtnText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#007AFF',
+    color: '#0A84FF',
   },
   statsPanel: {
     flexDirection: 'row',
@@ -297,50 +335,79 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20, // Apple Squircle
     paddingVertical: 16,
     paddingHorizontal: 8,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        elevation: 2,
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
+      } as any,
+    }),
   },
   statValue: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#1C1C1E',
+    fontWeight: '700', // Title weight SF
+    color: '#FFFFFF',
     marginBottom: 4,
+    fontVariant: ['tabular-nums'],
   },
   statTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '600', // Label weight SF
     color: '#8E8E93',
     textAlign: 'center',
     marginBottom: 2,
   },
   statDesc: {
     fontSize: 10,
+    fontWeight: '400', // Secondary weight SF
     color: '#AEAEB2',
     textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20, // Apple Squircle
     paddingVertical: 4,
     paddingHorizontal: 16,
     marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        elevation: 2,
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
+      } as any,
+    }),
   },
   infoRow: {
     flexDirection: 'row',
@@ -351,7 +418,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#1C1C1E',
+    color: '#FFFFFF',
   },
   infoValue: {
     fontSize: 15,
@@ -359,27 +426,40 @@ const styles = StyleSheet.create({
   },
   infoDivider: {
     height: 1,
-    backgroundColor: '#F2F2F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1C1C1E',
+    color: '#FFFFFF',
     marginBottom: 12,
     letterSpacing: -0.4,
   },
   historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 20, // Apple Squircle
     padding: 16,
     marginBottom: 28,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 2,
     borderWidth: 1,
-    borderColor: '#F2F2F7',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 8 },
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      android: {
+        elevation: 2,
+        backgroundColor: 'rgba(15, 15, 20, 0.75)',
+      },
+      web: {
+        backdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(255, 255, 255, 0.04)',
+        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
+      } as any,
+    }),
   },
   grid: {
     flexDirection: 'row',
@@ -388,8 +468,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   gridCell: {
-    width: (width - 40 - 32 - 60) / 7, // Calcula el ancho de cada celda para 7 por fila
-    height: (width - 40 - 32 - 60) / 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -402,33 +480,34 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   circleCompleted: {
-    backgroundColor: '#34C759',
-    borderColor: '#34C759',
+    backgroundColor: '#30D158',
+    borderColor: '#30D158',
   },
   circleMissed: {
-    backgroundColor: '#FFF0F0',
-    borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    borderColor: '#FF453A',
   },
   circleNotScheduled: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderStyle: 'dashed',
   },
   circleFuture: {
-    backgroundColor: '#F2F2F7',
-    borderColor: '#F2F2F7',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
   },
   circleInactive: {
-    backgroundColor: '#F2F2F7',
-    borderColor: '#E5E5EA',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   cellDayText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
+    fontVariant: ['tabular-nums'],
   },
   cellDayTextMissed: {
-    color: '#FF3B30',
+    color: '#FF453A',
   },
   gridLegend: {
     flexDirection: 'row',
@@ -437,7 +516,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F2F2F7',
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   legendItem: {
     flexDirection: 'row',
@@ -453,23 +532,23 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: '#8E8E93',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   deleteButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#FFF0F0',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    borderRadius: 20, // Apple Squircle
     paddingVertical: 14,
     marginBottom: 40,
     borderWidth: 1,
-    borderColor: '#FFE0E0',
+    borderColor: 'rgba(255, 69, 58, 0.3)',
   },
   deleteButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF3B30',
+    color: '#FF453A',
   },
 });
