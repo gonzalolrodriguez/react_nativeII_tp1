@@ -1,8 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable, Alert, SafeAreaView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, Alert, SafeAreaView, Platform, Dimensions } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate, getScheduledDates } from '@/services/habitsService';
+
+const { width } = Dimensions.get('window');
 
 export default function HabitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -127,7 +129,6 @@ export default function HabitDetailScreen() {
           headerShown: true,
           title: habit.name,
           headerBackTitle: 'Atrás',
-          headerBackTitleVisible: true,
           headerRight: () => (
             <Pressable onPress={handleEdit} style={styles.headerBtn}>
               <Text style={styles.headerBtnText}>Editar</Text>
