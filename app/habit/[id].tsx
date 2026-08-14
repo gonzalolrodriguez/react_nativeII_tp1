@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, Pressable, Alert, SafeAreaView, Platform, Dimensions } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Pressable, Alert, SafeAreaView, Dimensions } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate, getScheduledDates } from '@/services/habitsService';
@@ -12,7 +12,7 @@ export default function HabitDetailScreen() {
   const [habit, setHabit] = useState<Habit | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadHabit = async () => {
+  const loadHabit = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
@@ -27,12 +27,12 @@ export default function HabitDetailScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
 
   useFocusEffect(
     useCallback(() => {
       loadHabit();
-    }, [id])
+    }, [loadHabit])
   );
 
   const handleEdit = () => {
@@ -204,7 +204,6 @@ export default function HabitDetailScreen() {
 
               // Determinar estilo del anillo/círculo
               let circleStyle = styles.circleInactive;
-              let iconColor = '#FFFFFF';
               let hasIcon = false;
 
               if (isFuture || !isCreatedBefore) {
