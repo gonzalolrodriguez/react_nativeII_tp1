@@ -13,7 +13,7 @@ export default function DashboardScreen() {
   const todayStr = getLocalDateString();
 
   // Cargar hábitos desde el servicio
-  const loadHabits = async (showLoadingIndicator = true) => {
+  const loadHabits = useCallback(async (showLoadingIndicator = true) => {
     if (showLoadingIndicator) setLoading(true);
     try {
       const allHabits = await habitsService.fetchHabits();
@@ -26,13 +26,13 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [todayStr]);
 
   // Recargar al enfocar la pantalla
   useFocusEffect(
     useCallback(() => {
       loadHabits(habits.length === 0);
-    }, [])
+    }, [loadHabits, habits.length])
   );
 
   const handleRefresh = () => {
@@ -87,7 +87,7 @@ export default function DashboardScreen() {
       };
       const formatted = date.toLocaleDateString('es-AR', options);
       return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-    } catch (e) {
+    } catch {
       const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
       return `${weekdays[date.getDay()]}, ${date.getDate()} de ${months[date.getMonth()]}`;

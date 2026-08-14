@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, Platform, Dimensions, RefreshControl } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, Platform, Dimensions, RefreshControl, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { habitsService, Habit, Achievement, getLocalDateString, isHabitScheduledForDate } from '@/services/habitsService';
@@ -13,7 +13,7 @@ export default function HistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async (showLoadingIndicator = true) => {
+  const loadData = useCallback(async (showLoadingIndicator = true) => {
     if (showLoadingIndicator) setLoading(true);
     try {
       const allHabits = await habitsService.fetchHabits();
@@ -26,12 +26,12 @@ export default function HistoryScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadData(habits.length === 0);
-    }, [])
+    }, [loadData, habits.length])
   );
 
   const handleRefresh = () => {
@@ -123,6 +123,15 @@ export default function HistoryScreen() {
   // Estadísticas globales básicas
   const totalCompletedCount = habits.reduce((acc, h) => acc + h.completedDates.length, 0);
   const activeStreak = habits.length > 0 ? Math.max(...habits.map(h => h.currentStreak)) : 0;
+
+  if (loading && habits.length === 0) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Cargando historial...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -468,5 +477,16 @@ const styles = StyleSheet.create({
   achievementStatus: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#8E8E93',
   },
 });

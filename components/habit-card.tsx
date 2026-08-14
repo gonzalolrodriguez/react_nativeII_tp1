@@ -32,7 +32,7 @@ export function HabitCard({ habit, isCompleted, onToggle }: HabitCardProps) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [isCompleted]);
+  }, [isCompleted, scaleAnim]);
 
   // Colores pastel de categoría según Apple HIG
   const getCategoryStyles = (category: Habit['category']) => {
