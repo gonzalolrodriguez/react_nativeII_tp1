@@ -22,7 +22,7 @@ export function ThemeToggle() {
       damping: 22,
       mass: 0.8,
     });
-  }, [isDark]);
+  }, [isDark, animValue]);
 
   const handlePress = () => {
     if (Platform.OS !== 'web') {

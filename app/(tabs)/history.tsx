@@ -9,7 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function HistoryScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);

@@ -10,7 +10,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function DashboardScreen() {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
