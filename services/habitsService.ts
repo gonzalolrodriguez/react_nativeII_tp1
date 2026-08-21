@@ -6,6 +6,8 @@ export interface Habit {
   category: 'Salud' | 'Estudio' | 'Deporte' | 'Productividad' | 'Otro';
   frequency: 'daily' | 'weekly' | 'custom';
   customDays?: number[]; // 0 = Domingo, 1 = Lunes, etc.
+  color?: string;
+  icon?: string;
   createdAt: string; // ISO Date String
   completedDates: string[]; // ['YYYY-MM-DD', ...]
   currentStreak: number;

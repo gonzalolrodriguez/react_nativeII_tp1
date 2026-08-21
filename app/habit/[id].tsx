@@ -5,10 +5,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate, getScheduledDates } from '@/services/habitsService';
+import { useTheme } from '@/context/ThemeContext';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function HabitDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [habit, setHabit] = useState<Habit | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +47,7 @@ export default function HabitDetailScreen() {
     if (habit) {
       router.push({
         pathname: '/habit/manage',
-        params: { id: habit.id }
+        params: { id: habit.id },
       });
     }
   };
@@ -75,13 +78,15 @@ export default function HabitDetailScreen() {
 
   if (loading && !habit) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando detalle...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.textMuted }]}>Cargando detalle...</Text>
       </View>
     );
   }
 
   if (!habit) return null;
+
+  const habitColor = habit.color || colors.accent;
 
   // Generar días del mes actual
   const getDaysInCurrentMonth = (): Date[] => {
@@ -90,204 +95,187 @@ export default function HabitDetailScreen() {
     const month = today.getMonth();
     const numDays = new Date(year, month + 1, 0).getDate();
 
-    const days: Date[] = [];
+    const daysList: Date[] = [];
     for (let i = 1; i <= numDays; i++) {
-      days.push(new Date(year, month, i));
+      daysList.push(new Date(year, month, i));
     }
-    return days;
+    return daysList;
   };
 
   const days = getDaysInCurrentMonth();
-  const todayStr = getLocalDateString();
-  const currentMonthName = () => {
-    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    return months[new Date().getMonth()];
-  };
+  const weekdayLabels = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'];
 
-  // Calcular las estadísticas del mes actual
-  const getMonthlyStats = () => {
-    const startOfMonthStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
-    const habitCreatedStr = habit.createdAt.split('T')[0];
-    const initialDateStr = habitCreatedStr > startOfMonthStr ? habitCreatedStr : startOfMonthStr;
-    
-    const scheduledThisMonth = getScheduledDates(habit, todayStr).filter(d => d >= initialDateStr);
-    const completedThisMonth = scheduledThisMonth.filter(d => habit.completedDates.includes(d));
-    
-    const percentage = scheduledThisMonth.length > 0 
-      ? Math.round((completedThisMonth.length / scheduledThisMonth.length) * 100) 
-      : 0;
+  // Estadísticas avanzadas
+  const scheduledUntilToday = getScheduledDates(habit);
+  const totalScheduledDays = scheduledUntilToday.length;
+  const totalCompletedDays = habit.completedDates.length;
 
-    return {
-      scheduled: scheduledThisMonth.length,
-      completed: completedThisMonth.length,
-      percentage
-    };
-  };
+  const monthCompletionRate = totalScheduledDays > 0
+    ? Math.round((totalCompletedDays / totalScheduledDays) * 100)
+    : 0;
 
-  const stats = getMonthlyStats();
+  const firstDayOfMonthIndex = new Date(
+    days[0].getFullYear(),
+    days[0].getMonth(),
+    1
+  ).getDay();
+
+  const emptyCells = Array(firstDayOfMonthIndex).fill(null);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Stack.Screen
         options={{
           headerShown: true,
           title: habit.name,
           headerBackTitle: 'Atrás',
-          headerRight: () => (
-            <Pressable onPress={handleEdit} style={styles.headerBtn}>
-              <Text style={styles.headerBtnText}>Editar</Text>
-            </Pressable>
-          ),
-          headerStyle: {
-            backgroundColor: '#0B0B0E',
-          },
-          headerTitleStyle: {
-            color: '#FFFFFF',
-            fontWeight: '600',
-          },
           headerShadowVisible: false,
-          headerTintColor: '#0A84FF',
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { color: colors.textPrimary, fontWeight: '700' },
+          headerTintColor: colors.accent,
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <ThemeToggle />
+              <Pressable onPress={handleEdit} style={styles.headerIconButton}>
+                <Ionicons name="create-outline" size={22} color={colors.accent} />
+              </Pressable>
+            </View>
+          ),
         }}
       />
+
       <View style={styles.contentWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          {/* Panel de Estadísticas */}
-          <View style={styles.statsPanel}>
-            <View style={styles.statBox}>
-              <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.statValue}>🔥 {habit.currentStreak}</Text>
-              <Text style={styles.statTitle} numberOfLines={1}>Racha Actual</Text>
-              <Text style={styles.statDesc} numberOfLines={1}>
-                {habit.currentStreak === 1 ? 'día' : 'días'}
-              </Text>
-            </View>
-            <View style={styles.statBox}>
-              <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.statValue}>🏆 {habit.maxStreak}</Text>
-              <Text style={styles.statTitle} numberOfLines={1}>Racha Máxima</Text>
-              <Text style={styles.statDesc} numberOfLines={1}>
-                {habit.maxStreak === 1 ? 'día' : 'días'}
-              </Text>
-            </View>
-            <View style={styles.statBox}>
-              <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.statValue}>{stats.percentage}%</Text>
-              <Text style={styles.statTitle} numberOfLines={1}>Efectividad</Text>
-              <Text style={styles.statDesc} numberOfLines={1}>
-                en {currentMonthName()}
-              </Text>
-            </View>
-          </View>
-
-          {/* Frecuencia y Categoría Info */}
-          <View style={styles.infoCard}>
+          
+          {/* Tarjeta Principal del Hábito */}
+          <View style={[styles.mainCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
             <LinearGradient
-              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+              colors={[habitColor + '20', colors.cardBg]}
               style={StyleSheet.absoluteFillObject}
             />
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Categoría</Text>
-              <Text style={styles.infoValue} numberOfLines={1}>{habit.category}</Text>
-            </View>
-            <View style={styles.infoDivider} />
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Frecuencia</Text>
-              <Text style={styles.infoValue} numberOfLines={1}>
-                {habit.frequency === 'daily' 
-                  ? 'Todos los días' 
-                  : habit.frequency === 'weekly' 
-                  ? 'Una vez por semana' 
-                  : 'Días seleccionados'}
-              </Text>
-            </View>
-            {habit.frequency === 'custom' && habit.customDays && (
-              <>
-                <View style={styles.infoDivider} />
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Días activos</Text>
-                  <Text style={styles.infoValue} numberOfLines={1}>
-                    {habit.customDays.map(d => ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá'][d]).join(', ')}
+
+            <View style={styles.mainCardHeader}>
+              <View style={[styles.iconCircle, { backgroundColor: habitColor + '25', borderColor: habitColor + '50' }]}>
+                <Ionicons name={(habit.icon as any) || 'sparkles'} size={28} color={habitColor} />
+              </View>
+              <View style={styles.titleContainer}>
+                <Text style={[styles.habitTitle, { color: colors.textPrimary }]}>{habit.name}</Text>
+                <View style={styles.badgeRow}>
+                  <View style={[styles.categoryBadge, { backgroundColor: habitColor + '20' }]}>
+                    <Text style={[styles.categoryText, { color: habitColor }]}>{habit.category}</Text>
+                  </View>
+                  <Text style={[styles.frequencyText, { color: colors.textMuted }]}>
+                    {habit.frequency === 'daily' ? 'Diario' : habit.frequency === 'weekly' ? 'Semanal' : 'Personalizado'}
                   </Text>
                 </View>
-              </>
-            )}
+              </View>
+            </View>
           </View>
 
-          {/* Historial Visual de Anillos estilo Fitness */}
-          <Text style={styles.sectionTitle}>Historial de {currentMonthName()}</Text>
-          <View style={styles.historyCard}>
-            <LinearGradient
-              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.grid}>
-              {days.map((day) => {
-                const dateStr = day.toISOString().split('T')[0];
-                const dayNum = day.getDate();
+          {/* Grilla de Métricas y Rachas */}
+          <View style={styles.metricsGrid}>
+            <View style={[styles.metricCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+              <Text style={styles.metricEmoji}>🔥</Text>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{habit.currentStreak}</Text>
+              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Racha Actual</Text>
+            </View>
+
+            <View style={[styles.metricCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+              <Text style={styles.metricEmoji}>🏆</Text>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{habit.maxStreak}</Text>
+              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Mejor Racha</Text>
+            </View>
+
+            <View style={[styles.metricCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+              <Text style={styles.metricEmoji}>⚡</Text>
+              <Text style={[styles.metricValue, { color: colors.textPrimary }]}>{monthCompletionRate}%</Text>
+              <Text style={[styles.metricLabel, { color: colors.textMuted }]}>Efectividad</Text>
+            </View>
+          </View>
+
+          {/* Matriz de Consistencia Mensual */}
+          <View style={[styles.matrixCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+            <Text style={[styles.matrixTitle, { color: colors.textPrimary }]}>Matriz de Consistencia (30 días)</Text>
+            <Text style={[styles.matrixSubtitle, { color: colors.textMuted }]}>
+              Seguimiento diario de cumplimiento del mes actual
+            </Text>
+
+            <View style={styles.weekLabelsRow}>
+              {weekdayLabels.map((w, idx) => (
+                <Text key={idx} style={[styles.weekLabelText, { width: COLUMN_WIDTH, color: colors.textMuted }]}>
+                  {w}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {emptyCells.map((_, idx) => (
+                <View key={`empty-${idx}`} style={[styles.daySquare, { width: COLUMN_WIDTH, height: COLUMN_WIDTH }]} />
+              ))}
+              {days.map((date) => {
+                const dateStr = getLocalDateString(date);
                 const isScheduled = isHabitScheduledForDate(habit, dateStr);
                 const isCompleted = habit.completedDates.includes(dateStr);
+                const todayStr = getLocalDateString();
                 const isFuture = dateStr > todayStr;
-                const isCreatedBefore = habit.createdAt.split('T')[0] <= dateStr;
 
-                let circleStyle = styles.circleInactive;
-                let hasIcon = false;
+                let cellBg = colors.chipBg;
+                let borderColor = colors.cardBorder;
 
-                if (isFuture || !isCreatedBefore) {
-                  circleStyle = styles.circleFuture;
-                } else if (!isScheduled) {
-                  circleStyle = styles.circleNotScheduled;
-                } else if (isCompleted) {
-                  circleStyle = styles.circleCompleted;
-                  hasIcon = true;
-                } else {
-                  circleStyle = styles.circleMissed;
+                if (isCompleted) {
+                  cellBg = habitColor;
+                  borderColor = habitColor;
+                } else if (isScheduled && !isFuture) {
+                  cellBg = colors.danger + '25';
+                  borderColor = colors.danger + '40';
                 }
 
                 return (
-                  <View key={dayNum} style={[styles.gridCell, { width: COLUMN_WIDTH, height: COLUMN_WIDTH }]}>
-                    <View style={[styles.circleRing, circleStyle]}>
-                      {hasIcon ? (
-                        <Ionicons name="checkmark" size={14} color="#FFFFFF" />
-                      ) : (
-                        <Text style={[styles.cellDayText, isScheduled && !isCompleted && !isFuture && isCreatedBefore && styles.cellDayTextMissed]}>
-                          {dayNum}
-                        </Text>
-                      )}
-                    </View>
+                  <View
+                    key={dateStr}
+                    style={[
+                      styles.daySquare,
+                      {
+                        width: COLUMN_WIDTH,
+                        height: COLUMN_WIDTH,
+                        backgroundColor: cellBg,
+                        borderColor,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dayNumberText,
+                        { color: isCompleted ? '#FFFFFF' : isFuture ? colors.textMuted : colors.textPrimary },
+                      ]}
+                    >
+                      {date.getDate()}
+                    </Text>
                   </View>
                 );
               })}
             </View>
-            <View style={styles.gridLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendIndicator, styles.circleCompleted]} />
-                <Text style={styles.legendText} numberOfLines={1}>Completado</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendIndicator, styles.circleMissed]} />
-                <Text style={styles.legendText} numberOfLines={1}>Incompleto</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendIndicator, styles.circleNotScheduled]} />
-                <Text style={styles.legendText} numberOfLines={1}>No activo</Text>
-              </View>
-            </View>
           </View>
 
-          {/* Botón de Eliminación Discreta */}
-          <Pressable onPress={handleDelete} style={styles.deleteButton}>
-            <Ionicons name="trash-outline" size={18} color="#FF453A" />
-            <Text style={styles.deleteButtonText} numberOfLines={1}>Eliminar hábito</Text>
-          </Pressable>
+          {/* Botones de Acción (Editar / Eliminar) */}
+          <View style={styles.actionButtonsRow}>
+            <Pressable
+              onPress={handleEdit}
+              style={[styles.editButton, { backgroundColor: colors.chipBg, borderColor: colors.cardBorder }]}
+            >
+              <Ionicons name="pencil" size={18} color={colors.accent} style={{ marginRight: 8 }} />
+              <Text style={[styles.editButtonText, { color: colors.accent }]}>Editar Hábito</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={handleDelete}
+              style={[styles.deleteButton, { backgroundColor: colors.danger + '18', borderColor: colors.danger + '40' }]}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.danger} style={{ marginRight: 8 }} />
+              <Text style={[styles.deleteButtonText, { color: colors.danger }]}>Eliminar</Text>
+            </Pressable>
+          </View>
+
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -297,7 +285,6 @@ export default function HabitDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0B0E',
   },
   contentWrapper: {
     flex: 1,
@@ -309,246 +296,159 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0B0B0E',
   },
   loadingText: {
     fontSize: 16,
-    color: '#8E8E93',
   },
   scrollContent: {
-    padding: 16,
+    padding: 20,
     paddingBottom: 40,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
+  headerIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mainCard: {
+    borderRadius: 22,
+    padding: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  mainCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  titleContainer: {
+    flex: 1,
+  },
+  habitTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  categoryBadge: {
+    paddingHorizontal: 10,
     paddingVertical: 4,
+    borderRadius: 10,
   },
-  headerBtnText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#0A84FF',
+  categoryText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
-  statsPanel: {
+  frequencyText: {
+    fontSize: 13,
+  },
+  metricsGrid: {
     flexDirection: 'row',
     gap: 12,
     marginBottom: 20,
   },
-  statBox: {
+  metricCard: {
     flex: 1,
-    borderRadius: 20, // Apple Squircle
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    alignItems: 'center',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
+    alignItems: 'center',
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '700', // Title weight SF
-    color: '#FFFFFF',
+  metricEmoji: {
+    fontSize: 24,
     marginBottom: 4,
-    fontVariant: ['tabular-nums'],
   },
-  statTitle: {
-    fontSize: 12,
-    fontWeight: '600', // Label weight SF
-    color: '#8E8E93',
-    textAlign: 'center',
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '800',
     marginBottom: 2,
   },
-  statDesc: {
-    fontSize: 10,
-    fontWeight: '400', // Secondary weight SF
-    color: '#AEAEB2',
-    textAlign: 'center',
-    fontVariant: ['tabular-nums'],
+  metricLabel: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  infoCard: {
-    borderRadius: 20, // Apple Squircle
-    paddingVertical: 4,
-    paddingHorizontal: 16,
+  matrixCard: {
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
     marginBottom: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  infoLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#8E8E93',
-  },
-  infoDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  sectionTitle: {
-    fontSize: 18,
+  matrixTitle: {
+    fontSize: 17,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    letterSpacing: -0.4,
+    marginBottom: 2,
   },
-  historyCard: {
-    borderRadius: 20, // Apple Squircle
-    padding: 16,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
+  matrixSubtitle: {
+    fontSize: 13,
+    marginBottom: 16,
   },
-  grid: {
+  weekLabelsRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  weekLabelText: {
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'flex-start',
+    gap: 4,
   },
-  gridCell: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  circleRing: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 99,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  circleCompleted: {
-    backgroundColor: '#30D158',
-    borderColor: '#30D158',
-  },
-  circleMissed: {
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
-    borderColor: '#FF453A',
-  },
-  circleNotScheduled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.02)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    borderStyle: 'dashed',
-  },
-  circleFuture: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-  },
-  circleInactive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  cellDayText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#8E8E93',
-    fontVariant: ['tabular-nums'],
-  },
-  cellDayTextMissed: {
-    color: '#FF453A',
-  },
-  gridLegend: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  daySquare: {
+    borderRadius: 10,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  legendText: {
+  dayNumberText: {
     fontSize: 12,
-    color: '#8E8E93',
-    fontWeight: '400',
+    fontWeight: '700',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  editButton: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
   },
   deleteButton: {
+    flex: 1,
     flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
-    borderRadius: 20, // Apple Squircle
-    paddingVertical: 14,
-    marginBottom: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.3)',
   },
   deleteButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FF453A',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

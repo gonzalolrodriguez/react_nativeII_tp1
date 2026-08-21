@@ -1,14 +1,64 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TextInput, Pressable, ActivityIndicator, Platform } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
+} from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  FadeInDown,
+} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { habitsService, Habit } from '@/services/habitsService';
+import { useTheme } from '@/context/ThemeContext';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const CATEGORIES: Habit['category'][] = ['Salud', 'Estudio', 'Deporte', 'Productividad', 'Otro'];
+const CATEGORIES: { label: Habit['category']; icon: keyof typeof Ionicons.glyphMap; color: string }[] = [
+  { label: 'Salud', icon: 'heart', color: '#10B981' },
+  { label: 'Estudio', icon: 'book', color: '#3B82F6' },
+  { label: 'Deporte', icon: 'fitness', color: '#F59E0B' },
+  { label: 'Productividad', icon: 'flash', color: '#8B5CF6' },
+  { label: 'Otro', icon: 'sparkles', color: '#EC4899' },
+];
+
+const COLOR_PALETTE = [
+  '#6366F1', // Indigo
+  '#10B981', // Emerald
+  '#06B6D4', // Cyan
+  '#F59E0B', // Amber
+  '#EC4899', // Pink
+  '#8B5CF6', // Purple
+  '#EF4444', // Red
+  '#3B82F6', // Blue
+];
+
+const ICON_OPTIONS: (keyof typeof Ionicons.glyphMap)[] = [
+  'fitness',
+  'book',
+  'water',
+  'heart',
+  'leaf',
+  'sparkles',
+  'code-slash',
+  'trophy',
+  'bulb',
+  'flame',
+];
 
 const WEEKDAYS = [
   { label: 'L', value: 1 },
@@ -23,19 +73,23 @@ const WEEKDAYS = [
 export default function ManageHabitScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   // Estados del formulario
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Habit['category']>('Salud');
   const [frequency, setFrequency] = useState<Habit['frequency']>('daily');
   const [customDays, setCustomDays] = useState<number[]>([]);
-  
+  const [selectedColor, setSelectedColor] = useState('#6366F1');
+  const [selectedIcon, setSelectedIcon] = useState<keyof typeof Ionicons.glyphMap>('fitness');
+
   // Estados de control
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [nameError, setNameError] = useState('');
   const [daysError, setDaysError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
 
   // Animaciones físicas por resorte para el botón de guardar
   const buttonScale = useSharedValue(1);
@@ -47,7 +101,7 @@ export default function ManageHabitScreen() {
   });
 
   const handleButtonPressIn = () => {
-    buttonScale.value = withSpring(0.97, { stiffness: 280, damping: 18, mass: 0.6 });
+    buttonScale.value = withSpring(0.96, { stiffness: 300, damping: 18 });
   };
 
   const handleButtonPressOut = () => {
@@ -67,6 +121,10 @@ export default function ManageHabitScreen() {
             setCategory(habit.category);
             setFrequency(habit.frequency);
             setCustomDays(habit.customDays || []);
+            if (habit.color) setSelectedColor(habit.color);
+            if (habit.icon && ICON_OPTIONS.includes(habit.icon as any)) {
+              setSelectedIcon(habit.icon as any);
+            }
           }
         } catch (e) {
           console.error(e);
@@ -86,9 +144,12 @@ export default function ManageHabitScreen() {
   };
 
   const toggleDay = (dayValue: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.selectionAsync().catch(() => {});
+    }
     setDaysError('');
     if (customDays.includes(dayValue)) {
-      setCustomDays(customDays.filter(d => d !== dayValue));
+      setCustomDays(customDays.filter((d) => d !== dayValue));
     } else {
       setCustomDays([...customDays, dayValue]);
     }
@@ -112,15 +173,26 @@ export default function ManageHabitScreen() {
       setDaysError('');
     }
 
-    if (!isValid) return;
+    if (!isValid) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
+      return;
+    }
 
     setSaving(true);
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    }
+
     try {
       const habitData = {
         name: name.trim(),
         category,
         frequency,
-        customDays: frequency === 'custom' ? customDays : undefined
+        customDays: frequency === 'custom' ? customDays : undefined,
+        color: selectedColor,
+        icon: selectedIcon,
       };
 
       if (isEditMode && id) {
@@ -137,182 +209,356 @@ export default function ManageHabitScreen() {
     }
   };
 
-  // Colores dinámicos adaptados al tema oscuro glassmorphic
-  const getCategoryStyles = (cat: Habit['category']) => {
-    switch (cat) {
-      case 'Salud': return { bg: 'rgba(48, 209, 88, 0.15)', text: '#30D158' };
-      case 'Estudio': return { bg: 'rgba(10, 132, 255, 0.15)', text: '#0A84FF' };
-      case 'Deporte': return { bg: 'rgba(255, 159, 10, 0.15)', text: '#FF9F0A' };
-      case 'Productividad': return { bg: 'rgba(191, 90, 242, 0.15)', text: '#BF5AF2' };
-      default: return { bg: 'rgba(255, 255, 255, 0.08)', text: '#FFFFFF' };
-    }
-  };
-
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0A84FF" />
-        <Text style={styles.loadingText}>Cargando hábito...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.textMuted }]}>Cargando hábito...</Text>
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
       <Stack.Screen
         options={{
           headerShown: true,
           title: isEditMode ? 'Editar Hábito' : 'Nuevo Hábito',
           headerBackTitle: 'Atrás',
           headerShadowVisible: false,
-          headerStyle: { backgroundColor: '#0B0B0E' },
-          headerTitleStyle: { color: '#FFFFFF', fontWeight: '600' },
-          headerTintColor: '#0A84FF',
+          headerStyle: { backgroundColor: colors.background },
+          headerTitleStyle: { color: colors.textPrimary, fontWeight: '700', fontSize: 18 },
+          headerTintColor: colors.accent,
+          headerRight: () => <ThemeToggle />,
         }}
       />
-      <View style={styles.contentWrapper}>
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          
-          {/* Nombre del Hábito */}
-          <Text style={styles.label}>Nombre del hábito</Text>
-          <View style={[styles.inputWrapper, nameError !== '' && styles.inputWrapperError]}>
-            <TextInput
-              style={styles.input}
-              placeholder="Ej: Meditar, Estudiar, Tomar agua"
-              placeholderTextColor="rgba(255, 255, 255, 0.3)"
-              value={name}
-              onChangeText={handleNameChange}
-              maxLength={50}
-            />
-          </View>
-          {nameError !== '' && <Text style={styles.errorText}>{nameError}</Text>}
 
-          {/* Categoría */}
-          <Text style={styles.label}>Categoría</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.chipsContainer}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+      >
+        <View style={styles.contentWrapper}>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {CATEGORIES.map((cat) => {
-              const isSelected = category === cat;
-              const stylesCat = getCategoryStyles(cat);
-              return (
-                <Pressable
-                  key={cat}
-                  onPress={() => setCategory(cat)}
-                  style={[
-                    styles.chip,
-                    isSelected 
-                      ? { backgroundColor: stylesCat.bg, borderColor: stylesCat.bg } 
-                      : styles.chipUnselected
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      isSelected ? { color: stylesCat.text, fontWeight: '700' } : styles.chipTextUnselected
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {cat}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
+            {/* 1. INTERACTIVE LIVE PREVIEW CARD (Tarjetón interactivo en vivo) */}
+            <Animated.View entering={FadeInDown.duration(400)} style={styles.previewSection}>
+              <Text style={[styles.sectionHeading, { color: colors.textMuted }]}>Vista previa en tiempo real</Text>
+              
+              <View
+                style={[
+                  styles.previewCard,
+                  {
+                    backgroundColor: colors.cardBg,
+                    borderColor: selectedColor + '40',
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={[selectedColor + '1E', colors.cardBg]}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                
+                <View style={styles.previewCardHeader}>
+                  <View style={[styles.previewIconBox, { backgroundColor: selectedColor + '25', borderColor: selectedColor + '50' }]}>
+                    <Ionicons name={selectedIcon} size={22} color={selectedColor} />
+                  </View>
+                  
+                  <View style={styles.previewTitleArea}>
+                    <Text style={[styles.previewName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      {name.trim() || 'Nombre de tu hábito'}
+                    </Text>
+                    <View style={styles.previewBadgeRow}>
+                      <View style={[styles.previewBadge, { backgroundColor: selectedColor + '20' }]}>
+                        <Text style={[styles.previewBadgeText, { color: selectedColor }]}>{category}</Text>
+                      </View>
+                      <Text style={[styles.previewSubtext, { color: colors.textMuted }]}>
+                        {frequency === 'daily' ? 'Diario' : frequency === 'weekly' ? 'Semanal' : 'Personalizado'}
+                      </Text>
+                    </View>
+                  </View>
 
-          {/* Frecuencia */}
-          <Text style={styles.label}>Frecuencia</Text>
-          <View style={styles.frequencyRow}>
-            {(['daily', 'weekly', 'custom'] as Habit['frequency'][]).map((freq) => {
-              const isSelected = frequency === freq;
-              const labels = { daily: 'Diario', weekly: 'Semanal', custom: 'Personalizado' };
-              return (
-                <Pressable
-                  key={freq}
-                  onPress={() => {
-                    setFrequency(freq);
-                    setDaysError('');
-                  }}
-                  style={[
-                    styles.freqButton,
-                    isSelected ? styles.freqButtonSelected : styles.freqButtonUnselected
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.freqText,
-                      isSelected ? styles.freqTextSelected : styles.freqTextUnselected
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {labels[freq]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                  <View style={[styles.previewCheckCircle, { borderColor: selectedColor + '40' }]}>
+                    <Ionicons name="checkmark" size={16} color={selectedColor} />
+                  </View>
+                </View>
 
-          {/* Días activos personalizado */}
-          {frequency === 'custom' && (
-            <View style={styles.customDaysCard}>
-              <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <Text style={styles.subLabel}>Seleccioná los días de la semana</Text>
-              <View style={styles.daysGrid}>
-                {WEEKDAYS.map((day) => {
-                  const isSelected = customDays.includes(day.value);
+                <View style={[styles.previewFooter, { borderTopColor: colors.cardBorder }]}>
+                  <Text style={[styles.previewFooterText, { color: colors.textMuted }]}>
+                    🔥 Racha actual: <Text style={{ color: colors.textPrimary, fontWeight: '700' }}>0 días</Text>
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+
+            {/* 2. NOMBRE DEL HÁBITO */}
+            <Animated.View entering={FadeInDown.delay(100).duration(400)} style={styles.fieldSection}>
+              <View style={styles.labelRow}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>Nombre del hábito</Text>
+                <Text style={[styles.charCount, { color: colors.textMuted }]}>{name.length}/50</Text>
+              </View>
+              
+              <View
+                style={[
+                  styles.inputWrapper,
+                  {
+                    backgroundColor: colors.inputBg,
+                    borderColor: nameError
+                      ? colors.danger
+                      : isFocused
+                      ? selectedColor
+                      : colors.cardBorder,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="pencil"
+                  size={18}
+                  color={isFocused ? selectedColor : colors.textMuted}
+                  style={{ marginLeft: 14 }}
+                />
+                <TextInput
+                  style={[styles.input, { color: colors.textPrimary }]}
+                  placeholder="Ej: Meditar 10 minutos, Tomar agua"
+                  placeholderTextColor={colors.textMuted}
+                  value={name}
+                  onChangeText={handleNameChange}
+                  maxLength={50}
+                  onFocus={() => setIsFocused(true)}
+                  onBlur={() => setIsFocused(false)}
+                />
+              </View>
+              {nameError !== '' && <Text style={[styles.errorText, { color: colors.danger }]}>{nameError}</Text>}
+            </Animated.View>
+
+            {/* 3. SELECCIÓN DE CATEGORÍA */}
+            <Animated.View entering={FadeInDown.delay(200).duration(400)} style={styles.fieldSection}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Categoría</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsContainer}>
+                {CATEGORIES.map((cat) => {
+                  const isSelected = category === cat.label;
                   return (
                     <Pressable
-                      key={day.value}
-                      onPress={() => toggleDay(day.value)}
+                      key={cat.label}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                        setCategory(cat.label);
+                        setSelectedColor(cat.color);
+                      }}
                       style={[
-                        styles.dayCircle,
-                        isSelected ? styles.dayCircleSelected : styles.dayCircleUnselected
+                        styles.chip,
+                        {
+                          backgroundColor: isSelected ? cat.color + '22' : colors.chipBg,
+                          borderColor: isSelected ? cat.color : colors.cardBorder,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={cat.icon}
+                        size={15}
+                        color={isSelected ? cat.color : colors.textMuted}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text
+                        style={[
+                          styles.chipText,
+                          {
+                            color: isSelected ? cat.color : colors.textSecondary,
+                            fontWeight: isSelected ? '700' : '500',
+                          },
+                        ]}
+                      >
+                        {cat.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Animated.View>
+
+            {/* 4. PALETA DE COLORES (Chakra UI Style Spectrum) */}
+            <Animated.View entering={FadeInDown.delay(300).duration(400)} style={styles.fieldSection}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Color del tema</Text>
+              <View style={styles.colorGrid}>
+                {COLOR_PALETTE.map((hexColor) => {
+                  const isSelected = selectedColor === hexColor;
+                  return (
+                    <Pressable
+                      key={hexColor}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                        setSelectedColor(hexColor);
+                      }}
+                      style={[
+                        styles.colorDotWrapper,
+                        isSelected && { borderColor: hexColor, transform: [{ scale: 1.12 }] },
+                      ]}
+                    >
+                      <View style={[styles.colorDot, { backgroundColor: hexColor }]}>
+                        {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Animated.View>
+
+            {/* 5. SELECCIÓN DE ÍCONO */}
+            <Animated.View entering={FadeInDown.delay(400).duration(400)} style={styles.fieldSection}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Ícono del hábito</Text>
+              <View style={styles.iconGrid}>
+                {ICON_OPTIONS.map((iconName) => {
+                  const isSelected = selectedIcon === iconName;
+                  return (
+                    <Pressable
+                      key={iconName}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                        setSelectedIcon(iconName);
+                      }}
+                      style={[
+                        styles.iconTile,
+                        {
+                          backgroundColor: isSelected ? selectedColor + '20' : colors.chipBg,
+                          borderColor: isSelected ? selectedColor : colors.cardBorder,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={iconName}
+                        size={20}
+                        color={isSelected ? selectedColor : colors.textMuted}
+                      />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </Animated.View>
+
+            {/* 6. FRECUENCIA (Framer Motion Segmented Switch) */}
+            <Animated.View entering={FadeInDown.delay(500).duration(400)} style={styles.fieldSection}>
+              <Text style={[styles.label, { color: colors.textMuted }]}>Frecuencia</Text>
+              <View style={[styles.segmentedTrack, { backgroundColor: colors.chipBg, borderColor: colors.cardBorder }]}>
+                {(['daily', 'weekly', 'custom'] as Habit['frequency'][]).map((freq) => {
+                  const isSelected = frequency === freq;
+                  const labels = { daily: 'Diario', weekly: 'Semanal', custom: 'Personalizado' };
+                  return (
+                    <Pressable
+                      key={freq}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+                        setFrequency(freq);
+                        setDaysError('');
+                      }}
+                      style={[
+                        styles.segmentButton,
+                        isSelected && { backgroundColor: selectedColor, shadowColor: selectedColor },
                       ]}
                     >
                       <Text
                         style={[
-                          styles.dayCircleText,
-                          isSelected ? styles.dayCircleTextSelected : styles.dayCircleTextUnselected
+                          styles.segmentText,
+                          {
+                            color: isSelected ? '#FFFFFF' : colors.textMuted,
+                            fontWeight: isSelected ? '700' : '500',
+                          },
                         ]}
                       >
-                        {day.label}
+                        {labels[freq]}
                       </Text>
                     </Pressable>
                   );
                 })}
               </View>
-              {daysError !== '' && <Text style={styles.errorText}>{daysError}</Text>}
-            </View>
-          )}
 
-          {/* Botón de Guardado con animación de resorte */}
-          <AnimatedPressable
-            onPress={handleSave}
-            onPressIn={handleButtonPressIn}
-            onPressOut={handleButtonPressOut}
-            disabled={saving}
-            style={[
-              styles.saveButton,
-              saving && styles.saveButtonDisabled,
-              buttonAnimatedStyle
-            ]}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.saveButtonText} numberOfLines={1}>
-                {isEditMode ? 'Guardar Cambios' : 'Crear Hábito'}
-              </Text>
-            )}
-          </AnimatedPressable>
+              {/* Días personalizados */}
+              {frequency === 'custom' && (
+                <View style={[styles.customDaysCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                  <Text style={[styles.subLabel, { color: colors.textSecondary }]}>
+                    Seleccioná los días activos de la semana
+                  </Text>
+                  <View style={styles.daysGrid}>
+                    {WEEKDAYS.map((day) => {
+                      const isSelected = customDays.includes(day.value);
+                      return (
+                        <Pressable
+                          key={day.value}
+                          onPress={() => toggleDay(day.value)}
+                          style={[
+                            styles.dayCircle,
+                            {
+                              backgroundColor: isSelected ? selectedColor : colors.chipBg,
+                              borderColor: isSelected ? selectedColor : colors.cardBorder,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dayCircleText,
+                              {
+                                color: isSelected ? '#FFFFFF' : colors.textMuted,
+                                fontWeight: isSelected ? '700' : '600',
+                              },
+                            ]}
+                          >
+                            {day.label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {daysError !== '' && <Text style={[styles.errorText, { color: colors.danger }]}>{daysError}</Text>}
+                </View>
+              )}
+            </Animated.View>
 
-        </ScrollView>
-      </View>
+            {/* 7. BOTÓN PRINCIPAL DE GUARDAR CON SPRING */}
+            <Animated.View entering={FadeInDown.delay(600).duration(400)}>
+              <AnimatedPressable
+                onPress={handleSave}
+                onPressIn={handleButtonPressIn}
+                onPressOut={handleButtonPressOut}
+                disabled={saving}
+                style={[styles.saveButtonWrapper, buttonAnimatedStyle]}
+              >
+                <LinearGradient
+                  colors={[selectedColor, selectedColor + 'CC']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[styles.saveButtonGradient, saving && { opacity: 0.6 }]}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name={isEditMode ? 'save-outline' : 'add-circle-outline'}
+                        size={22}
+                        color="#FFFFFF"
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={styles.saveButtonText}>
+                        {isEditMode ? 'Guardar Cambios' : 'Crear Hábito'}
+                      </Text>
+                    </>
+                  )}
+                </LinearGradient>
+              </AnimatedPressable>
+
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.cancelButton}
+              >
+                <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>Cancelar</Text>
+              </Pressable>
+            </Animated.View>
+
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -320,211 +566,260 @@ export default function ManageHabitScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0B0E',
   },
   contentWrapper: {
     flex: 1,
     width: '100%',
-    maxWidth: 600, // Limita ancho del formulario en Web/Tablets
+    maxWidth: 600,
     alignSelf: 'center',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#0B0B0E',
     gap: 12,
   },
   loadingText: {
-    color: '#8E8E93',
     fontSize: 16,
   },
   scrollContent: {
+    padding: 20,
+    paddingBottom: 50,
+  },
+  sectionHeading: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 10,
+  },
+  previewSection: {
+    marginBottom: 24,
+  },
+  previewCard: {
+    borderRadius: 20,
+    borderWidth: 1,
     padding: 16,
-    paddingBottom: 40,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  previewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  previewIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  previewTitleArea: {
+    flex: 1,
+  },
+  previewName: {
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  previewBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  previewBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  previewBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  previewSubtext: {
+    fontSize: 12,
+  },
+  previewCheckCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewFooter: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  previewFooterText: {
+    fontSize: 13,
+  },
+  fieldSection: {
+    marginBottom: 22,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   label: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#8E8E93',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 20,
+    letterSpacing: 0.6,
     marginBottom: 8,
   },
-  subLabel: {
-    fontSize: 14,
+  charCount: {
+    fontSize: 12,
     fontWeight: '500',
-    color: '#8E8E93',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   inputWrapper: {
-    borderRadius: 12, // Nested squircle rounded border
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    borderWidth: 1.5,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-      } as any,
-    }),
-  },
-  inputWrapperError: {
-    borderColor: '#FF453A', // Apple Red HIG
   },
   input: {
-    paddingHorizontal: 16,
+    flex: 1,
+    paddingHorizontal: 12,
     paddingVertical: 14,
-    fontSize: 17,
-    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '500',
   },
   errorText: {
-    color: '#FF453A', // Apple Red HIG
     fontSize: 13,
     marginTop: 6,
     paddingLeft: 4,
-    fontWeight: '400',
+    fontWeight: '500',
   },
   chipsContainer: {
     gap: 8,
     paddingVertical: 4,
   },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 20, // Squircle para chips
-    borderWidth: 1,
-  },
-  chipUnselected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 18,
+    borderWidth: 1.5,
   },
   chipText: {
     fontSize: 14,
   },
-  chipTextUnselected: {
-    color: '#8E8E93',
-    fontWeight: '400',
-  },
-  frequencyRow: {
+  colorGrid: {
     flexDirection: 'row',
-    borderRadius: 12, // Squircle
-    padding: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    ...Platform.select({
-      ios: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-      } as any,
-    }),
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingVertical: 4,
   },
-  freqButton: {
-    flex: 1,
-    paddingVertical: 10,
+  colorDotWrapper: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 9, // Squircle
   },
-  freqButtonSelected: {
-    backgroundColor: '#0A84FF',
+  colorDot: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  freqButtonUnselected: {
-    backgroundColor: 'transparent',
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingVertical: 4,
   },
-  freqText: {
-    fontSize: 14,
-    fontWeight: '600',
+  iconTile: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  freqTextSelected: {
-    color: '#FFFFFF',
+  segmentedTrack: {
+    flexDirection: 'row',
+    borderRadius: 16,
+    padding: 4,
+    borderWidth: 1,
   },
-  freqTextUnselected: {
-    color: '#8E8E93',
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  segmentText: {
+    fontSize: 13,
   },
   customDaysCard: {
-    marginTop: 16,
-    borderRadius: 20, // Main block squircle
-    padding: 16,
+    marginTop: 14,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-      } as any,
-    }),
+  },
+  subLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 12,
   },
   daysGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
   },
   dayCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12, // Squircle nested day controls
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
   },
-  dayCircleSelected: {
-    backgroundColor: '#0A84FF',
-    borderColor: '#0A84FF',
-  },
-  dayCircleUnselected: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
   dayCircleText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
   },
-  dayCircleTextSelected: {
-    color: '#FFFFFF',
+  saveButtonWrapper: {
+    marginTop: 10,
+    borderRadius: 18,
+    overflow: 'hidden',
+    elevation: 4,
   },
-  dayCircleTextUnselected: {
-    color: '#8E8E93',
-  },
-  saveButton: {
-    marginTop: 40,
-    backgroundColor: '#0A84FF',
-    borderRadius: 14, // Squircle nested
+  saveButtonGradient: {
+    flexDirection: 'row',
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0A84FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  saveButtonDisabled: {
-    backgroundColor: 'rgba(10, 132, 255, 0.5)',
+    borderRadius: 18,
   },
   saveButtonText: {
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
+  },
+  cancelButton: {
+    marginTop: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

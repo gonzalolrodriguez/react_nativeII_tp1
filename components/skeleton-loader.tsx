@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Animated } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 export function SkeletonLoader() {
+  const { colors, isDark } = useTheme();
   const pulseAnim = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -24,22 +26,49 @@ export function SkeletonLoader() {
     return () => pulse.stop();
   }, [pulseAnim]);
 
+  const blockBg = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)';
+
   return (
     <View style={styles.container}>
-      {/* 3 cards skeleton */}
       {[1, 2, 3].map((key) => (
-        <View key={key} style={styles.card}>
+        <View
+          key={key}
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.cardBg,
+              borderColor: colors.cardBorder,
+            },
+          ]}
+        >
           <View style={styles.content}>
-            {/* Title skeleton */}
-            <Animated.View style={[styles.titleLine, { opacity: pulseAnim }]} />
-            {/* Subtitle skeleton */}
+            <Animated.View
+              style={[
+                styles.titleLine,
+                { backgroundColor: blockBg, opacity: pulseAnim },
+              ]}
+            />
             <View style={styles.subtitleRow}>
-              <Animated.View style={[styles.tag, { opacity: pulseAnim }]} />
-              <Animated.View style={[styles.streak, { opacity: pulseAnim }]} />
+              <Animated.View
+                style={[
+                  styles.tag,
+                  { backgroundColor: blockBg, opacity: pulseAnim },
+                ]}
+              />
+              <Animated.View
+                style={[
+                  styles.streak,
+                  { backgroundColor: blockBg, opacity: pulseAnim },
+                ]}
+              />
             </View>
           </View>
-          {/* Circle skeleton */}
-          <Animated.View style={[styles.circle, { opacity: pulseAnim }]} />
+          <Animated.View
+            style={[
+              styles.circle,
+              { backgroundColor: blockBg, opacity: pulseAnim },
+            ]}
+          />
         </View>
       ))}
     </View>
@@ -54,15 +83,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
   },
   content: {
     flex: 1,
@@ -71,8 +95,7 @@ const styles = StyleSheet.create({
   titleLine: {
     height: 18,
     width: '70%',
-    backgroundColor: '#E5E5EA',
-    borderRadius: 4,
+    borderRadius: 6,
     marginBottom: 10,
   },
   subtitleRow: {
@@ -80,22 +103,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tag: {
-    height: 12,
+    height: 14,
     width: 60,
-    backgroundColor: '#E5E5EA',
-    borderRadius: 3,
+    borderRadius: 6,
     marginRight: 8,
   },
   streak: {
-    height: 12,
+    height: 14,
     width: 80,
-    backgroundColor: '#E5E5EA',
-    borderRadius: 3,
+    borderRadius: 6,
   },
   circle: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E5E5EA',
+    borderRadius: 14,
   },
 });

@@ -169,3 +169,14 @@ este documento contiene el desglose detallado de las 14 tareas desarrolladas (T0
   * **Solución**: se aplicó `KeyboardAvoidingView` con `behavior={Platform.OS === 'ios' ? 'padding' : 'height'}` y `keyboardShouldPersistTaps="handled"`.
   * **Linter**: se ejecutó `expo lint` eliminando todas las importaciones residuales.
 * **Commits**: `b4665c1`, `90a2bea`
+
+---
+
+### Tarea T14: Toggle Minimalista Modo Claro/Oscuro y Rediseño Ultra-Moderno de Gestión
+* **Prompt Utilizado**:
+  > *"Aplica un toggle moderno y minimalista para intercambiar entre modo claro y modo oscuro. Haz que la sección de nuevo hábito y editar hábito tengan un aspecto moderno con animaciones, transiciones e inspiración en tendencias de UI (Framer Motion, Chakra UI)..."*
+* **Qué Generó la IA**:
+  `ThemeContext` para persistencia en `AsyncStorage`, componente `ThemeToggle` con físicas de resorte en `react-native-reanimated`, y formulario `manage.tsx` renovado con tarjeta interactiva en vivo, espectro de colores Chakra UI y selector de íconos.
+* **Qué se Corrigió a Mano y Cómo**:
+  * **Solución**: Se integró `ThemeContext` en el layout raíz `_layout.tsx` garantizando sincronización en todas las pantallas (`index.tsx`, `history.tsx`, `[id].tsx`, `habit-card.tsx`, `skeleton-loader.tsx`). Se añadió la vista previa interactiva en tiempo real en la cima del formulario de gestión.
+

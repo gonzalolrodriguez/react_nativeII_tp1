@@ -5,8 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { habitsService, Habit, Achievement, getLocalDateString, isHabitScheduledForDate } from '@/services/habitsService';
+import { useTheme } from '@/context/ThemeContext';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function HistoryScreen() {
+  const { colors, isDark } = useTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,11 +103,11 @@ export default function HistoryScreen() {
   const renderDayDot = (status: string) => {
     switch (status) {
       case 'full':
-        return <View style={[styles.dayDot, { backgroundColor: '#30D158' }]} />;
+        return <View style={[styles.dayDot, { backgroundColor: colors.success }]} />;
       case 'partial':
-        return <View style={[styles.dayDot, { backgroundColor: '#FF9F0A' }]} />;
+        return <View style={[styles.dayDot, { backgroundColor: colors.warning }]} />;
       case 'zero':
-        return <View style={[styles.dayDot, { backgroundColor: '#FF453A' }]} />;
+        return <View style={[styles.dayDot, { backgroundColor: colors.danger }]} />;
       default:
         return <View style={[styles.dayDot, { backgroundColor: 'transparent' }]} />;
     }
@@ -124,15 +127,15 @@ export default function HistoryScreen() {
 
   if (loading && habits.length === 0) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0A84FF" />
-        <Text style={styles.loadingText}>Cargando historial...</Text>
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.textMuted }]}>Cargando historial...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.contentWrapper}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -141,50 +144,55 @@ export default function HistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
-              tintColor="#0A84FF"
+              tintColor={colors.accent}
             />
           }
         >
           <View style={styles.header}>
-            <Text style={styles.subtitleText}>Progreso y medallas</Text>
-            <Text style={styles.titleText}>Historial</Text>
+            <View>
+              <Text style={[styles.subtitleText, { color: colors.textMuted }]}>Progreso y medallas</Text>
+              <Text style={[styles.titleText, { color: colors.textPrimary }]}>Historial</Text>
+            </View>
+            <ThemeToggle />
           </View>
 
           {/* Resumen General */}
           <View style={styles.statsRow}>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                colors={[colors.accent + '15', colors.cardBg]}
                 style={StyleSheet.absoluteFillObject}
               />
-              <Text style={styles.statValue}>{totalCompletedCount}</Text>
-              <Text style={styles.statLabel} numberOfLines={1}>Completados</Text>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>{totalCompletedCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]} numberOfLines={1}>Completados</Text>
             </View>
-            <View style={styles.statCard}>
+            <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <LinearGradient
-                colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+                colors={['#F59E0B15', colors.cardBg]}
                 style={StyleSheet.absoluteFillObject}
               />
-              <Text style={styles.statValue}>🔥 {activeStreak}</Text>
-              <Text style={styles.statLabel} numberOfLines={1}>Racha Max Hoy</Text>
+              <Text style={[styles.statValue, { color: colors.textPrimary }]}>🔥 {activeStreak}</Text>
+              <Text style={[styles.statLabel, { color: colors.textMuted }]} numberOfLines={1}>Racha Máx Hoy</Text>
             </View>
           </View>
 
           {/* Calendario Mensual */}
-          <View style={styles.sectionCard}>
+          <View style={[styles.sectionCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
             <LinearGradient
-              colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
+              colors={[colors.gradientStart, colors.gradientEnd]}
               style={StyleSheet.absoluteFillObject}
             />
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle} numberOfLines={1}>Consistencia de {getMonthName()}</Text>
-              <Ionicons name="calendar-outline" size={20} color="#8E8E93" />
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                Consistencia de {getMonthName()}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color={colors.textMuted} />
             </View>
 
             {/* Días de la semana */}
             <View style={styles.weekLabelsContainer}>
               {weekdayLabels.map((label, index) => (
-                <Text key={index} style={[styles.weekLabel, { width: COLUMN_WIDTH }]}>
+                <Text key={index} style={[styles.weekLabel, { width: COLUMN_WIDTH, color: colors.textMuted }]}>
                   {label}
                 </Text>
               ))}
@@ -202,8 +210,18 @@ export default function HistoryScreen() {
 
                 return (
                   <View key={`day-${dayNum}`} style={[styles.dayCell, { width: COLUMN_WIDTH }]}>
-                    <View style={[styles.dayNumberContainer, isToday && styles.todayContainer]}>
-                      <Text style={[styles.dayNumber, isToday && styles.todayText]}>
+                    <View
+                      style={[
+                        styles.dayNumberContainer,
+                        isToday && { backgroundColor: colors.accent },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.dayNumber,
+                          { color: isToday ? '#FFFFFF' : colors.textPrimary },
+                        ]}
+                      >
                         {dayNum}
                       </Text>
                     </View>
@@ -214,55 +232,64 @@ export default function HistoryScreen() {
             </View>
 
             {/* Leyenda */}
-            <View style={styles.legendContainer}>
+            <View style={[styles.legendContainer, { borderTopColor: colors.cardBorder }]}>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#30D158' }]} />
-                <Text style={styles.legendText} numberOfLines={1}>Todo listo</Text>
+                <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+                <Text style={[styles.legendText, { color: colors.textMuted }]} numberOfLines={1}>Todo listo</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF9F0A' }]} />
-                <Text style={styles.legendText} numberOfLines={1}>Parcial</Text>
+                <View style={[styles.legendDot, { backgroundColor: colors.warning }]} />
+                <Text style={[styles.legendText, { color: colors.textMuted }]} numberOfLines={1}>Parcial</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#FF453A' }]} />
-                <Text style={styles.legendText} numberOfLines={1}>Sin hacer</Text>
+                <View style={[styles.legendDot, { backgroundColor: colors.danger }]} />
+                <Text style={[styles.legendText, { color: colors.textMuted }]} numberOfLines={1}>Sin hacer</Text>
               </View>
             </View>
           </View>
 
           {/* Sección de Logros */}
-          <Text style={styles.sectionTitleOutside}>Logros Destacados</Text>
-          <View style={isTabletOrWeb ? styles.achievementsGrid : styles.achievementsContainer}>
-            {achievements.map((ach) => (
+          <View style={styles.achievementsHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Logros e Insignias</Text>
+            <Text style={[styles.achievementsCount, { color: colors.accent }]}>
+              {achievements.filter(a => a.unlocked).length} de {achievements.length}
+            </Text>
+          </View>
+
+          <View style={styles.achievementsGrid}>
+            {achievements.map((achievement) => (
               <View
-                key={ach.id}
+                key={achievement.id}
                 style={[
                   styles.achievementCard,
-                  !ach.unlocked && styles.achievementCardLocked,
-                  isTabletOrWeb && styles.achievementCardGridItem,
+                  {
+                    backgroundColor: colors.cardBg,
+                    borderColor: achievement.unlocked ? colors.accent + '60' : colors.cardBorder,
+                    opacity: achievement.unlocked ? 1 : 0.6,
+                  },
                 ]}
               >
-                <LinearGradient
-                  colors={['rgba(255, 255, 255, 0.12)', 'rgba(255, 255, 255, 0.01)']}
-                  style={StyleSheet.absoluteFillObject}
-                />
                 <View
                   style={[
-                    styles.achievementIconContainer,
-                    ach.unlocked ? styles.achievementIconUnlocked : styles.achievementIconLocked,
+                    styles.achievementIconBg,
+                    {
+                      backgroundColor: achievement.unlocked ? colors.accent + '20' : colors.chipBg,
+                    },
                   ]}
                 >
-                  <Text style={styles.achievementIcon}>{ach.icon}</Text>
+                  <Text style={styles.achievementIcon}>{achievement.icon}</Text>
                 </View>
                 <View style={styles.achievementInfo}>
-                  <Text style={styles.achievementTitle} numberOfLines={1}>{ach.title}</Text>
-                  <Text style={styles.achievementDescription} numberOfLines={2}>{ach.description}</Text>
-                </View>
-                <View style={styles.achievementStatus}>
-                  {ach.unlocked ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#30D158" />
-                  ) : (
-                    <Ionicons name="lock-closed" size={20} color="#AEAEB2" />
+                  <Text style={[styles.achievementTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {achievement.title}
+                  </Text>
+                  <Text style={[styles.achievementDesc, { color: colors.textMuted }]} numberOfLines={2}>
+                    {achievement.description}
+                  </Text>
+                  {achievement.unlocked && achievement.unlockedAt && (
+                    <Text style={[styles.unlockedDate, { color: colors.success }]} numberOfLines={1}>
+                      ✓ Desbloqueado {achievement.unlockedAt}
+                    </Text>
                   )}
                 </View>
               </View>
@@ -277,7 +304,6 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0B0B0E',
   },
   contentWrapper: {
     flex: 1,
@@ -285,97 +311,65 @@ const styles = StyleSheet.create({
     maxWidth: 1024,
     alignSelf: 'center',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 16,
+  },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 24 : 16,
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Platform.OS === 'android' ? 24 : 16,
+    paddingBottom: 16,
   },
   subtitleText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#8E8E93',
+    fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   titleText: {
     fontSize: 34,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
     letterSpacing: -1,
     marginTop: 2,
   },
   statsRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
-    borderRadius: 20, // Apple Squircle
+    borderRadius: 20,
     padding: 16,
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '800',
     marginBottom: 4,
-    fontVariant: ['tabular-nums'],
   },
   statLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#8E8E93',
+    fontSize: 13,
+    fontWeight: '500',
   },
   sectionCard: {
     borderRadius: 20,
     padding: 16,
-    marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    marginBottom: 24,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -386,65 +380,48 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.4,
   },
   weekLabelsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   weekLabel: {
     textAlign: 'center',
     fontSize: 12,
     fontWeight: '600',
-    color: '#8E8E93',
   },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
   },
   dayCell: {
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
   },
   dayNumberContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12, // Standard circle
-    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
-    marginBottom: 4,
-  },
-  todayContainer: {
-    backgroundColor: '#0A84FF',
+    justifyContent: 'center',
+    marginBottom: 2,
   },
   dayNumber: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#FFFFFF',
-    fontVariant: ['tabular-nums'],
-  },
-  todayText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
   },
   dayDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   legendContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    justifyContent: 'space-around',
+    marginTop: 16,
     paddingTop: 12,
-    marginTop: 12,
+    borderTopWidth: 1,
   },
   legendItem: {
     flexDirection: 'row',
@@ -458,74 +435,36 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#8E8E93',
-    fontWeight: '400',
+    fontWeight: '500',
   },
-  sectionTitleOutside: {
-    fontSize: 20,
+  achievementsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  achievementsCount: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 12,
-    letterSpacing: -0.4,
-  },
-  achievementsContainer: {
-    gap: 12,
   },
   achievementsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-  },
-  achievementCardGridItem: {
-    width: '48.5%', // Ocupa casi la mitad para dos columnas con gap
+    gap: 12,
   },
   achievementCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 20, // Apple Squircle
-    padding: 16,
+    width: '48%',
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: 8 },
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      android: {
-        elevation: 2,
-        backgroundColor: 'rgba(15, 15, 20, 0.75)',
-      },
-      web: {
-        backdropFilter: 'blur(20px)',
-        backgroundColor: 'rgba(255, 255, 255, 0.04)',
-        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.2)',
-      } as any,
-    }),
   },
-  achievementCardLocked: {
-    opacity: 0.4,
-  },
-  achievementIconContainer: {
+  achievementIconBg: {
     width: 44,
     height: 44,
-    borderRadius: 12, // Squircle para controles internos
-    justifyContent: 'center',
+    borderRadius: 14,
     alignItems: 'center',
-    marginRight: 14,
-  },
-  achievementIconUnlocked: {
-    backgroundColor: 'rgba(255, 159, 10, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.3)',
-  },
-  achievementIconLocked: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    marginBottom: 10,
   },
   achievementIcon: {
     fontSize: 22,
@@ -534,29 +473,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   achievementTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  achievementDescription: {
+  achievementDesc: {
     fontSize: 12,
-    color: '#8E8E93',
     lineHeight: 16,
+    marginBottom: 6,
   },
-  achievementStatus: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0B0B0E',
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#8E8E93',
+  unlockedDate: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 });
