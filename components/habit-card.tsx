@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
@@ -15,6 +15,7 @@ interface HabitCardProps {
 }
 
 export function HabitCard({ habit, isCompleted, onToggle }: HabitCardProps) {
+  const router = useRouter();
   // Shared values para animaciones físicas por resorte
   const cardScale = useSharedValue(1);
   const checkScale = useSharedValue(1);
@@ -38,6 +39,13 @@ export function HabitCard({ habit, isCompleted, onToggle }: HabitCardProps) {
 
   const handleCardPressOut = () => {
     cardScale.value = withSpring(1, { stiffness: 240, damping: 20 });
+  };
+
+  const handleCardPress = () => {
+    router.push({
+      pathname: '/habit/[id]',
+      params: { id: habit.id }
+    });
   };
 
   const handleCheckPressIn = () => {
@@ -74,12 +82,12 @@ export function HabitCard({ habit, isCompleted, onToggle }: HabitCardProps) {
         style={StyleSheet.absoluteFillObject}
       />
 
-      <Link href={{ pathname: '/habit/[id]', params: { id: habit.id } }} asChild>
-        <AnimatedPressable
-          onPressIn={handleCardPressIn}
-          onPressOut={handleCardPressOut}
-          style={[styles.infoArea, cardAnimatedStyle]}
-        >
+      <AnimatedPressable
+        onPress={handleCardPress}
+        onPressIn={handleCardPressIn}
+        onPressOut={handleCardPressOut}
+        style={[styles.infoArea, cardAnimatedStyle]}
+      >
           <View style={styles.infoContainer}>
             <Text style={styles.habitName} numberOfLines={1}>
               {habit.name}
@@ -103,7 +111,6 @@ export function HabitCard({ habit, isCompleted, onToggle }: HabitCardProps) {
             </View>
           </View>
         </AnimatedPressable>
-      </Link>
 
       {/* Control del checkbox interactivo */}
       <AnimatedPressable
