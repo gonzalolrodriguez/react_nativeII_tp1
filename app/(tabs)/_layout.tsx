@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useTheme } from '@/context/ThemeContext';
@@ -20,11 +19,6 @@ export default function TabLayout() {
           borderTopColor: colors.cardBorder,
           elevation: 0,
           shadowOpacity: 0,
-          ...Platform.select({
-            web: {
-              backdropFilter: 'blur(20px)',
-            } as any,
-          }),
         },
       }}
     >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -213,7 +213,11 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
   },
   streakNumber: {
-    fontVariant: ['tabular-nums'],
+    ...Platform.select({
+      ios: {
+        fontVariant: ['tabular-nums'],
+      },
+    }),
     fontWeight: '700',
   },
   checkboxArea: {
