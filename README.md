@@ -23,12 +23,12 @@
 
 ## ✨ Características Principales
 
-* 📊 **Dashboard Diario**: Resumen dinámico del porcentaje de hábitos completados hoy con marcado rápido mediante un solo tap.
-* ⚡ **Micro-interacciones y Animaciones Fluidas**: Respuestas con físicade resorte (*springs*) mediante React Native Reanimated y vibraciones táctiles con `expo-haptics`.
-* 🏆 **Sistema de Logros y Gamificación**: Medallas e insignias desbloqueables automáticamente según las rachas de consistencia mantenidas.
-* 📅 **Matriz de Consistencia de 30 Días**: Vista gráfica tipo contribución estilo GitHub para analizar el progreso de cada hábito individual.
-* 📝 **Gestión Completa (CRUD)**: Creación y edición de hábitos especificando categoría, frecuencia, color distintivo e ícono.
-* 🔒 **100% Offline-First**: Persistencia local segura mediante `@react-native-async-storage/async-storage` con latencia artificial de 500ms simulando consumo de red.
+* 📊 **Dashboard Diario**: resumen dinámico del porcentaje de hábitos completados hoy con marcado rápido mediante un solo tap.
+* ⚡ **Micro-interacciones y Animaciones Fluidas**: respuestas con físicade resorte (*springs*) mediante React Native Reanimated y vibraciones táctiles con `expo-haptics`.
+* 🏆 **Sistema de Logros y Gamificación**: medallas e insignias desbloqueables automáticamente según las rachas de consistencia mantenidas.
+* 📅 **Matriz de Consistencia de 30 Días**: vista gráfica tipo contribución estilo GitHub para analizar el progreso de cada hábito individual.
+* 📝 **Gestión Completa (CRUD)**: creación y edición de hábitos especificando categoría, frecuencia, color distintivo e ícono.
+* 🔒 **100% Offline-First**: persistencia local segura mediante `@react-native-async-storage/async-storage` con latencia artificial de 500ms simulando consumo de red.
 
 ---
 
@@ -94,11 +94,11 @@ En el directorio del proyecto puedes ejecutar:
 
 El repositorio cuenta con documentación exhaustiva organizada en los siguientes archivos:
 
-* 📑 [spec.md](file:///c:/Users/lehen/Desktop/TP%20react%20native/better/spec.md): Especificación funcional, requerimientos y modelos de datos TypeScript.
-* 📐 [plan.md](file:///c:/Users/lehen/Desktop/TP%20react%20native/better/plan.md): Plan de arquitectura, setup de skills y roadmap de desarrollo.
-* 📋 [tasks.md](file:///c:/Users/lehen/Desktop/TP%20react%20native/better/tasks.md): Desglose detallado de las tareas T00 a T13 (prompts, IA y correcciones manuales).
-* ⚙️ [proceso.md](file:///c:/Users/lehen/Desktop/TP%20react%20native/better/proceso.md): Proceso de interacción con la IA, matriz de correcciones manuales y lecciones aprendidas.
-* 📄 [DOCUMENTACION.md](file:///c:/Users/lehen/Desktop/TP%20react%20native/better/DOCUMENTACION.md): Documento consolidado unificado.
+* 📑 [spec.md]: especificación funcional, requerimientos y modelos de datos TypeScript.
+* 📐 [plan.md]: plan de arquitectura, setup de skills y roadmap de desarrollo.
+* 📋 [tasks.md]: desglose detallado de las tareas T00 a T13 (prompts, IA y correcciones manuales).
+* ⚙️ [proceso.md]: proceso de interacción con la IA, matriz de correcciones manuales y lecciones aprendidas.
+* 📄 [DOCUMENTACION.md]: documento consolidado unificado.
 
 ---
 

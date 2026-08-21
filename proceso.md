@@ -16,10 +16,10 @@ El desarrollo se llevó a cabo siguiendo una metodología **iterativa asistida p
 +------------------+     +--------------------+     +---------------------+     +--------------------+
 ```
 
-1. **Prompt Específico**: Formulación de instrucciones acotadas por tarea (T00 a T13).
-2. **Generación Asistida**: Creación de código inicial apoyado en las skills (`expo-router`, `expo-data-fetching`, `expo-project-structure`).
-3. **Inspección y Pruebas**: Verificación de linter (`expo lint`), compilación de tipos (`tsc`) y comportamiento dinámico en la pantalla.
-4. **Refactorización Manual**: Corrección de bugs de borde, optimización de renderizado y commit atómico en Git.
+1. **Prompt Específico**: formulación de instrucciones acotadas por tarea (T00 a T13).
+2. **Generación Asistida**: creación de código inicial apoyado en las skills (`expo-router`, `expo-data-fetching`, `expo-project-structure`).
+3. **Inspección y Pruebas**: verificación de linter (`expo lint`), compilación de tipos (`tsc`) y comportamiento dinámico en la pantalla.
+4. **Refactorización Manual**: corrección de bugs de borde, optimización de renderizado y commit atómico en Git.
 
 ---
 
@@ -56,13 +56,13 @@ A continuación se detallan las áreas donde la propuesta de la IA requirió int
 
 ---
 
-## 4. Evaluaciones y Lecciones Aprendidas
+## 4. Evaluaciones y lecciones aprendidas
 
 ### Puntos Fuertes de la IA
-* **Aceleración del Desarrollo**: Generación instantánea de estructuras base de componentes y definiciones de tipos TypeScript.
-* **Diseño Visual**: Creación de estilos complejos con gradientes y temas oscuros con alta calidad estética.
+* **Aceleración del Desarrollo**: generación instantánea de estructuras base de componentes y definiciones de tipos TypeScript.
+* **Diseño Visual**: creación de estilos complejos con gradientes y temas oscuros con alta calidad estética.
 
 ### Áreas que Requirieron Supervisión Humana
-* **Casos de Borde en Lógica de Negocio**: El cálculo de fechas, zonas horarias y rangos de rachas requiere validaciones matemáticas estrictas que la IA tiende a simplificar.
-* **Gestión del Estado de Navegación**: La integración de animaciones basadas en gestos con la navegación de Expo Router necesita ajustes precisos de handlers para evitar conflictos.
-* **Optimización de React Hooks**: Las dependencias en `useCallback` y `useEffect` deben revisarse manualmente para garantizar el cumplimiento de las reglas de React Hooks.
+* **Casos de Borde en Lógica de Negocio**: el cálculo de fechas, zonas horarias y rangos de rachas requiere validaciones matemáticas estrictas que la IA tiende a simplificar.
+* **Gestión del Estado de Navegación**: la integración de animaciones basadas en gestos con la navegación de Expo Router necesita ajustes precisos de handlers para evitar conflictos.
+* **Optimización de React Hooks**: las dependencias en `useCallback` y `useEffect` deben revisarse manualmente para garantizar el cumplimiento de las reglas de React Hooks.
