@@ -1,51 +1,122 @@
-# Learn more: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# =============================================================================
+# .gitignore para Proyecto React Native + Expo
+# =============================================================================
 
-# Dependencies
+# -----------------------------------------------------------------------------
+# 1. Dependencias y Gestores de Paquetes
+# -----------------------------------------------------------------------------
 node_modules/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+package-lock.json.backup
 
-# Expo
+# -----------------------------------------------------------------------------
+# 2. Expo, EAS y Salidas de Compilación Web
+# -----------------------------------------------------------------------------
 .expo/
+.expo-shared/
+.eas/
 dist/
 web-build/
 expo-env.d.ts
-
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# Native build and local configuration files
-/ios
-/android
-local.properties
-.gradle/
-build/
-*.apk
-*.aab
-*.ipa
 *.jsbundle
+*.bundle
 
-# Metro
-.metro-health-check*
+# -----------------------------------------------------------------------------
+# 3. Herramientas de IA, Agentes y Habilidades Locales
+# -----------------------------------------------------------------------------
+.agents/
+agent/
+.claude/
+.gemini/
+.cursor/
+.copilot/
+.windsurf/
+skills-lock.json
+*.chat
 
-# Environment variables (prevent committing sensitive keys/secrets)
+# -----------------------------------------------------------------------------
+# 4. Variables de Entorno y Secretos (Seguridad Crítica)
+# -----------------------------------------------------------------------------
 .env
 .env.local
 .env.*.local
 .env.development
 .env.test
 .env.production
-.env.development.local
-.env.test.local
-.env.production.local
+.env.staging
 .env.*
 !.env.example
+!.env.template
 
-# IDEs and Editors
+# -----------------------------------------------------------------------------
+# 5. Claves Criptográficas, Certificados y Keystores Móviles
+# -----------------------------------------------------------------------------
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+*.cer
+*.der
+*.mobileprovision
+credentials.json
+# Descomentar si usas Firebase con credenciales sensibles de producción
+# google-services.json
+# GoogleService-Info.plist
+
+# -----------------------------------------------------------------------------
+# 6. Compilados Nativos de Android e iOS (Managed Workflow / Prebuild)
+# -----------------------------------------------------------------------------
+/ios
+/android
+local.properties
+.gradle/
+build/
+*/build/
+*.apk
+*.aab
+*.ipa
+*.xcarchive
+*.dSYM.zip
+*.dSYM/
+Pods/
+DerivedData/
+*.orig.*
+.kotlin/
+
+# -----------------------------------------------------------------------------
+# 7. Metro Bundler, Linters y Caché
+# -----------------------------------------------------------------------------
+.metro-health-check*
+.eslintcache
+.cache/
+*.tsbuildinfo
+*.tmp
+
+# -----------------------------------------------------------------------------
+# 8. Logs y Depuración
+# -----------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# -----------------------------------------------------------------------------
+# 9. Pruebas y Cobertura de Código
+# -----------------------------------------------------------------------------
+coverage/
+.nyc_output/
+
+# -----------------------------------------------------------------------------
+# 10. IDEs y Editores de Código
+# -----------------------------------------------------------------------------
 .idea/
 .vscode/*
 !.vscode/settings.json
@@ -57,30 +128,20 @@ build/
 *.njsproj
 *.sln
 *.sw?
+*.sublime-project
+*.sublime-workspace
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# Testing & Coverage
-coverage/
-.nyc_output/
-
-# Linter
-.eslintcache
-
-# macOS system files
+# -----------------------------------------------------------------------------
+# 11. Archivos Temporales del Sistema Operativo
+# -----------------------------------------------------------------------------
+# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
 Icon
 ._*
 
-# Windows system files
+# Windows
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
@@ -89,8 +150,7 @@ ehthumbs_vista.db
 [Dd]esktop.ini
 $RECYCLE.BIN/
 
-# Typescript
-*.tsbuildinfo
-
-# Templates/Examples
-app-example
+# -----------------------------------------------------------------------------
+# 12. Plantillas y Carpetas de Ejemplo de Expo
+# -----------------------------------------------------------------------------
+app-example/
