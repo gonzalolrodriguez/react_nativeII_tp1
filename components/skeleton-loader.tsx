@@ -1,10 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Animated } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 export function SkeletonLoader() {
   const { colors, isDark } = useTheme();
-  const pulseAnim = useRef(new Animated.Value(0.3)).current;
+  const [pulseAnim] = useState(() => new Animated.Value(0.3));
 
   useEffect(() => {
     const pulse = Animated.loop(

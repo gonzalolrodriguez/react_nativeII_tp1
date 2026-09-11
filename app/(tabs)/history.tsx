@@ -4,14 +4,16 @@ import { useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { habitsService, Habit, Achievement, getLocalDateString, isHabitScheduledForDate } from '@/services/habitsService';
+import { habitsService, Habit, Achievement, AnalyticsData, getLocalDateString, isHabitScheduledForDate } from '@/services/habitsService';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { AnalyticsCharts } from '@/components/analytics-charts';
 
 export default function HistoryScreen() {
   const { colors } = useTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -25,8 +27,10 @@ export default function HistoryScreen() {
     try {
       const allHabits = await habitsService.fetchHabits();
       const allAchievements = await habitsService.getAchievements();
+      const analytics = await habitsService.getAnalyticsData();
       setHabits(allHabits);
       setAchievements(allAchievements);
+      setAnalyticsData(analytics);
     } catch (error) {
       console.error('Error loading history data', error);
     } finally {
@@ -161,7 +165,7 @@ export default function HistoryScreen() {
             <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <LinearGradient
                 colors={[colors.accent + '15', colors.cardBg]}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
               />
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>{totalCompletedCount}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]} numberOfLines={1}>Completados</Text>
@@ -169,18 +173,21 @@ export default function HistoryScreen() {
             <View style={[styles.statCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
               <LinearGradient
                 colors={['#F59E0B15', colors.cardBg]}
-                style={StyleSheet.absoluteFillObject}
+                style={StyleSheet.absoluteFill}
               />
               <Text style={[styles.statValue, { color: colors.textPrimary }]}>🔥 {activeStreak}</Text>
               <Text style={[styles.statLabel, { color: colors.textMuted }]} numberOfLines={1}>Racha Máx Hoy</Text>
             </View>
           </View>
 
+          {/* 📊 CENTRO ANALÍTICO DE COMPORTAMIENTO (Gráficos offline) */}
+          {analyticsData && <AnalyticsCharts data={analyticsData} onRefreshData={handleRefresh} />}
+
           {/* Calendario Mensual */}
           <View style={[styles.sectionCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
             <LinearGradient
               colors={[colors.gradientStart, colors.gradientEnd]}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
             />
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.textPrimary }]} numberOfLines={1}>

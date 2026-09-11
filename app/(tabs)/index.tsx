@@ -1,17 +1,23 @@
 import React, { useState, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, Pressable, RefreshControl, Platform, useWindowDimensions } from 'react-native';
-import { useFocusEffect, Link } from 'expo-router';
+import { StyleSheet, Text, View, FlatList, Pressable, RefreshControl, Platform, useWindowDimensions, ScrollView } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate } from '@/services/habitsService';
+import { getEffectiveTimeOfDay } from '@/utils/dateUtils';
+import * as Haptics from 'expo-haptics';
 import { HabitCard } from '@/components/habit-card';
 import { SkeletonLoader } from '@/components/skeleton-loader';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
+type TimeOfDayFilter = 'todas' | 'mañana' | 'tarde' | 'noche';
+
 export default function DashboardScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const [habits, setHabits] = useState<Habit[]>([]);
+  const [selectedTod, setSelectedTod] = useState<TimeOfDayFilter>('todas');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const todayStr = getLocalDateString();
@@ -49,7 +55,7 @@ export default function DashboardScreen() {
     loadHabits(false);
   };
 
-  // Toggle de completado con UI Optimista
+  // Toggle de completado binario
   const handleToggleHabit = async (id: string) => {
     setHabits((prevHabits) =>
       prevHabits.map((h) => {
@@ -82,7 +88,56 @@ export default function DashboardScreen() {
     }
   };
 
-  // Formateador de fecha elegante
+  // Actualizar progreso cuantitativo
+  const handleUpdateProgress = async (id: string, delta: number) => {
+    setHabits((prev) =>
+      prev.map((h) => {
+        if (h.id === id) {
+          const target = h.targetValue || 100;
+          const currentVal = (h.unitProgress && h.unitProgress[todayStr]) || 0;
+          const newVal = Math.max(0, currentVal + delta);
+          const unitProgress = { ...(h.unitProgress || {}), [todayStr]: newVal };
+          const completedSet = new Set(h.completedDates);
+          if (newVal >= target) {
+            completedSet.add(todayStr);
+          } else {
+            completedSet.delete(todayStr);
+          }
+          return { ...h, unitProgress, completedDates: Array.from(completedSet) };
+        }
+        return h;
+      })
+    );
+
+    try {
+      await habitsService.updateQuantitativeProgress(id, todayStr, delta);
+      loadHabits(false);
+    } catch (e) {
+      console.error(e);
+      loadHabits(false);
+    }
+  };
+
+  // Conteos dinámicos por momento del día
+  const todCounts = React.useMemo(() => {
+    const counts = { todas: habits.length, mañana: 0, tarde: 0, noche: 0 };
+    habits.forEach((h) => {
+      const eff = getEffectiveTimeOfDay(h);
+      if (eff === 'mañana') counts.mañana++;
+      else if (eff === 'tarde') counts.tarde++;
+      else if (eff === 'noche') counts.noche++;
+    });
+    return counts;
+  }, [habits]);
+
+  // Filtrado preciso por momento del día (Mañana, Tarde, Noche)
+  const filteredHabits = habits.filter((h) => {
+    if (selectedTod === 'todas') return true;
+    const effective = getEffectiveTimeOfDay(h);
+    return effective === selectedTod;
+  });
+
+  // Formateador de fecha
   const getFormattedDate = () => {
     const date = new Date();
     try {
@@ -100,6 +155,13 @@ export default function DashboardScreen() {
     }
   };
 
+  const todOptions: { key: TimeOfDayFilter; label: string; count: number; icon: string }[] = [
+    { key: 'todas', label: 'Todas', count: todCounts.todas, icon: 'sparkles-outline' },
+    { key: 'mañana', label: 'Mañana', count: todCounts.mañana, icon: 'sunny-outline' },
+    { key: 'tarde', label: 'Tarde', count: todCounts.tarde, icon: 'partly-sunny-outline' },
+    { key: 'noche', label: 'Noche', count: todCounts.noche, icon: 'moon-outline' },
+  ];
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.contentWrapper}>
@@ -111,40 +173,88 @@ export default function DashboardScreen() {
           
           <View style={styles.headerActions}>
             <ThemeToggle />
-            <Link href="/habit/manage" asChild>
-              <Pressable
-                style={[
-                  styles.headerButton,
-                  { backgroundColor: colors.chipBg, borderColor: colors.cardBorder },
-                ]}
-              >
-                <Ionicons name="add" size={24} color={colors.accent} />
-              </Pressable>
-            </Link>
           </View>
+        </View>
+
+        {/* Filtros por Momento del Día (Mañana, Tarde, Noche) */}
+        <View style={styles.filterSection}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterList}>
+            {todOptions.map((item) => {
+              const isSelected = selectedTod === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setSelectedTod(item.key);
+                  }}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isSelected ? colors.accent : colors.chipBg,
+                      borderColor: isSelected ? colors.accent : colors.cardBorder,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={14}
+                    color={isSelected ? '#FFFFFF' : colors.textMuted}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isSelected ? '#FFFFFF' : colors.textMuted, fontWeight: isSelected ? '700' : '500' },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.countBadge,
+                      {
+                        backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : colors.cardBorder,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.countText,
+                        { color: isSelected ? '#FFFFFF' : colors.textMuted },
+                      ]}
+                    >
+                      {item.count}
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
         {loading ? (
           <View style={styles.listContainer}>
             <SkeletonLoader />
           </View>
-        ) : habits.length === 0 ? (
+        ) : filteredHabits.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>🎯</Text>
-            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin hábitos para hoy</Text>
+            <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Sin hábitos en esta rutina</Text>
             <Text style={[styles.emptySubtitle, { color: colors.textMuted }]}>
-              No tenés hábitos programados para hoy. ¡Creá uno nuevo para empezar a registrar!
+              No tenés hábitos agendados para este momento del día. ¡Agregá o edita un hábito!
             </Text>
-            <Link href="/habit/manage" asChild>
-              <Pressable style={[styles.emptyButton, { backgroundColor: colors.accent }]}>
-                <Text style={styles.emptyButtonText}>Crear Hábito</Text>
-              </Pressable>
-            </Link>
+            <Pressable
+              onPress={() => router.push('/habit/manage')}
+              style={[styles.emptyButton, { backgroundColor: colors.accent }]}
+            >
+              <Text style={styles.emptyButtonText}>Crear Hábito</Text>
+            </Pressable>
           </View>
         ) : (
           <FlatList
             key={isTabletOrWeb ? 'grid' : 'list'}
-            data={habits}
+            data={filteredHabits}
             keyExtractor={(item) => item.id}
             numColumns={numColumns}
             columnWrapperStyle={isTabletOrWeb ? styles.gridRow : undefined}
@@ -154,6 +264,7 @@ export default function DashboardScreen() {
                   habit={item}
                   isCompleted={item.completedDates.includes(todayStr)}
                   onToggle={() => handleToggleHabit(item.id)}
+                  onUpdateProgress={(delta) => handleUpdateProgress(item.id, delta)}
                 />
               </View>
             )}
@@ -171,11 +282,12 @@ export default function DashboardScreen() {
 
         {/* FAB (Floating Action Button) */}
         {habits.length > 0 && (
-          <Link href="/habit/manage" asChild>
-            <Pressable style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]}>
-              <Ionicons name="add" size={28} color="#FFFFFF" />
-            </Pressable>
-          </Link>
+          <Pressable
+            onPress={() => router.push('/habit/manage')}
+            style={[styles.fab, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
+          >
+            <Ionicons name="add" size={28} color="#FFFFFF" />
+          </Pressable>
         )}
       </View>
     </SafeAreaView>
@@ -198,7 +310,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 24 : 16,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   headerActions: {
     flexDirection: 'row',
@@ -224,6 +336,37 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
+  },
+  filterSection: {
+    paddingBottom: 12,
+  },
+  filterList: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 13,
+  },
+  countBadge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   listContainer: {
     paddingHorizontal: 16,

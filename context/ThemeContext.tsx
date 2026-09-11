@@ -8,6 +8,7 @@ export interface ThemeColors {
   mode: ThemeMode;
   background: string;
   cardBg: string;
+  surfaceCard: string;
   cardBorder: string;
   textPrimary: string;
   textSecondary: string;
@@ -28,6 +29,7 @@ const darkColors: ThemeColors = {
   mode: 'dark',
   background: '#090B10',
   cardBg: 'rgba(22, 27, 38, 0.75)',
+  surfaceCard: 'rgba(22, 27, 38, 0.75)',
   cardBorder: 'rgba(255, 255, 255, 0.08)',
   textPrimary: '#F8FAFC',
   textSecondary: '#CBD5E1',
@@ -48,6 +50,7 @@ const lightColors: ThemeColors = {
   mode: 'light',
   background: '#F1F5F9',
   cardBg: '#FFFFFF',
+  surfaceCard: '#FFFFFF',
   cardBorder: 'rgba(226, 232, 240, 0.9)',
   textPrimary: '#0F172A',
   textSecondary: '#334155',
@@ -92,7 +95,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const stored = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (stored === 'light' || stored === 'dark') {
           setThemeState(stored);
-        } else if (systemScheme) {
+        } else if (systemScheme === 'light' || systemScheme === 'dark') {
           setThemeState(systemScheme);
         }
       } catch (e) {

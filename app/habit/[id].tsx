@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { habitsService, Habit, getLocalDateString, isHabitScheduledForDate, getScheduledDates } from '@/services/habitsService';
+import { getEffectiveTimeOfDay } from '@/utils/dateUtils';
 import { useTheme } from '@/context/ThemeContext';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 
@@ -151,7 +152,7 @@ export default function HabitDetailScreen() {
           <View style={[styles.mainCard, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
             <LinearGradient
               colors={[habitColor + '20', colors.cardBg]}
-              style={StyleSheet.absoluteFillObject}
+              style={StyleSheet.absoluteFill}
             />
 
             <View style={styles.mainCardHeader}>
@@ -164,6 +165,34 @@ export default function HabitDetailScreen() {
                   <View style={[styles.categoryBadge, { backgroundColor: habitColor + '20' }]}>
                     <Text style={[styles.categoryText, { color: habitColor }]}>{habit.category}</Text>
                   </View>
+
+                  {(() => {
+                    const effectiveTod = getEffectiveTimeOfDay(habit);
+                    const todLabel =
+                      effectiveTod === 'mañana'
+                        ? '🌅 Mañana'
+                        : effectiveTod === 'tarde'
+                        ? '☀️ Tarde'
+                        : effectiveTod === 'noche'
+                        ? '🌙 Noche'
+                        : null;
+                    return todLabel ? (
+                      <View style={[styles.categoryBadge, { backgroundColor: colors.chipBg }]}>
+                        <Text style={[styles.categoryText, { color: colors.textSecondary }]}>
+                          {todLabel}
+                        </Text>
+                      </View>
+                    ) : null;
+                  })()}
+
+                  {habit.reminderTime && (
+                    <View style={[styles.categoryBadge, { backgroundColor: colors.chipBg }]}>
+                      <Text style={[styles.categoryText, { color: colors.textSecondary }]}>
+                        ⏰ {habit.reminderTime}
+                      </Text>
+                    </View>
+                  )}
+
                   <Text style={[styles.frequencyText, { color: colors.textMuted }]}>
                     {habit.frequency === 'daily' ? 'Diario' : habit.frequency === 'weekly' ? 'Semanal' : 'Personalizado'}
                   </Text>
